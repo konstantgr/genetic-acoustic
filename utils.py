@@ -18,6 +18,13 @@ def clean(obj, flag: str):
     print(f'Removed {cnt} objects')
 
 
+def get_indices(size, p=0.5):
+    np.random.seed(42)
+
+    is_plastic = np.random.choice([0, 1], size=(size,), p=[1-p, p])
+    return np.nonzero(is_plastic)
+    
+
 def get_config(filename):
     with open(filename) as f:
         return yaml.safe_load(f)

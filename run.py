@@ -2,16 +2,9 @@ import mph
 import numpy as np
 from tqdm import tqdm
 
-from utils import copy_project, clean, get_config
+from utils import copy_project, clean, get_config, get_indices
 from geometries import circles_grid, squares_grid, add_circle, add_square
 mph.option('classkit', True)
-
-
-def get_indices(size, p=0.5):
-    np.random.seed(42)
-
-    is_plastic = np.random.choice([0, 1], size=(size,), p=[1-p, p])
-    return np.nonzero(is_plastic)
 
 
 if __name__ == "__main__":
