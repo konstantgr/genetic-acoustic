@@ -16,7 +16,7 @@ def get_indices(size, p=0.5):
 
 if __name__ == "__main__":
     config = get_config('config.yml')
-    
+
     src = config['source_directory']
     tmp = config['tmp_directory']
     dst = config['target_directory']
@@ -84,32 +84,28 @@ if __name__ == "__main__":
 
     plastic.property('input', list(np.array(node_selections)[indices]))
     model.build(amodel)
-
-    # study = model/'studies'/'Study 1'
-    # solution.java.study(study.tag())
-    # solution.java.attach(study.tag())
     
     model.mesh()
     model.solve()
 
-    plots = model/'plots'
-    plots.java.setOnlyPlotWhenRequested(True)
-    plot = plots.create('PlotGroup2D', name='geom')
+    # plots = model/'plots'
+    # plots.java.setOnlyPlotWhenRequested(True)
+    # plot = plots.create('PlotGroup2D', name='geom')
 
-    surface = plot.create('Surface', name='field strength')
-    surface.property('resolution', 'normal')
-    surface.property('expr', 'acpr.p_s')
+    # surface = plot.create('Surface', name='field strength')
+    # surface.property('resolution', 'normal')
+    # surface.property('expr', 'acpr.p_s')
 
-    exports = model/'exports'
+    # exports = model/'exports'
     
-    image = exports.create('Image', name='image')
-    image.property('sourceobject', plots/'geom')
-    image.property('filename', images_dst + '\\' 'image.png')
-    image.property('size', 'manualweb')
-    image.property('unit', 'px')
-    image.property('height', '720')
-    image.property('width', '720')
-    model.export()
+    # image = exports.create('Image', name='image')
+    # image.property('sourceobject', plots/'geom')
+    # image.property('filename', images_dst + '\\' 'image.png')
+    # image.property('size', 'manualweb')
+    # image.property('unit', 'px')
+    # image.property('height', '720')
+    # image.property('width', '720')
+    # model.export()
 
     model.save(dst)
     print('Project saved succesfully')
