@@ -1,5 +1,7 @@
 import shutil
 import yaml
+import numpy as np
+from collections.abc import Sequence
 
 
 def copy_project(src, dst):
@@ -28,3 +30,15 @@ def get_indices(size, p=0.5):
 def get_config(filename):
     with open(filename) as f:
         return yaml.safe_load(f)
+
+
+def make_unique(labels: Sequence[str]) -> list:
+    new_labels = []
+    _, real_index, counts = np.unique(labels, return_counts=True, return_inverse=True)
+    for index in range(len(labels)):
+        for count in range(counts[real_index[index]]):
+            new_label = labels[index] + (f'({count})' if count != 0 else '')
+            if new_label not in new_labels:
+                new_labels.append(new_label)
+                break
+    return new_labels

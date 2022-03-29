@@ -130,3 +130,5 @@ dmypy.json
 
 config.yml
 .idea/
+samples/tmp.mph
+samples/sample1.mph

@@ -1,10 +1,54 @@
+import logging
+
 import mph
 import numpy as np
 from tqdm import tqdm
 
-from utils import copy_project, clean, get_config, get_indices
+from utils import copy_project, clean, get_config, get_indices, make_unique
 from geometries import circles_grid, squares_grid, add_circle, add_square
 mph.option('classkit', True)
+
+import pandas as pd
+
+
+def evaluate_global_ev(dataset: mph.Node, evaluation: mph.Node) -> pd.DataFrame:
+    #  https://github.com/MPh-py/MPh/blob/2b967b77352f9ce7effcd50ad4774bf5eaf731ea/mph/model.py#L425
+    evaluation.property('data', dataset)
+    java = evaluation.java
+    results = np.array(java.getReal())
+    if java.isComplex():
+        results = results.astype('complex')
+        results += 1j * np.array(java.getImag())
+    return pd.DataFrame(data=results.T, columns=make_unique(evaluation.property('descr')))
+
+
+def plot2d(model: mph.Model, expr: str, filepath, props: dict = None):
+    plots = model / 'plots'
+    plots.java.setOnlyPlotWhenRequested(True)
+    plot = plots.create('PlotGroup2D')
+
+    surface = plot.create('Surface', name='field strength')
+    surface.property('resolution', 'normal')
+    surface.property('expr', expr)
+
+    exports = model / 'exports'
+
+    image = exports.create('Image')
+    image.property('sourceobject', plot)
+    image.property('filename', filepath)
+
+    default_props = {'size': 'manualweb',
+                     'unit': 'px',
+                     'height': '720',
+                     'width': '720'}
+    for prop in default_props:
+        image.property(prop, default_props[prop])
+    if props is not None:
+        for prop in props:
+            image.property(prop, props[prop])
+    model.export()
+    image.remove()
+    plot.remove()
 
 
 if __name__ == "__main__":
@@ -17,8 +61,8 @@ if __name__ == "__main__":
 
     copy_project(src, tmp)
 
-    client = mph.start(cores=1)
-    model = client.load(tmp)
+    client = mph.start(cores=1) # client.clear() can be used after the run
+    model = client.load(tmp) # model.clear() can be used after the modeling
 
     air = model/'selections'/'air'
     plastic = model/'selections'/'plastic'
@@ -81,24 +125,16 @@ if __name__ == "__main__":
     model.mesh()
     model.solve()
 
-    # plots = model/'plots'
-    # plots.java.setOnlyPlotWhenRequested(True)
-    # plot = plots.create('PlotGroup2D', name='geom')
+    evaluation = model / 'evaluations' / 'Global Evaluation 1'
+    dataset = (model / 'datasets').children()[0]
+    evaluation.property('data', dataset)
 
-    # surface = plot.create('Surface', name='field strength')
-    # surface.property('resolution', 'normal')
-    # surface.property('expr', 'acpr.p_s')
+    logging.info(f'Evaluation : {evaluation.name()}')
+    logging.info(f'Dataset: {dataset.name()}')
+    logging.info(f'Solution: {dataset.property("solution")}')
 
-    # exports = model/'exports'
-    
-    # image = exports.create('Image', name='image')
-    # image.property('sourceobject', plots/'geom')
-    # image.property('filename', images_dst + '\\' 'image.png')
-    # image.property('size', 'manualweb')
-    # image.property('unit', 'px')
-    # image.property('height', '720')
-    # image.property('width', '720')
-    # model.export()
+    evaluate_global_ev(dataset, evaluation).to_csv('result.csv')
+    plot2d(model, 'acpr.p_s', images_dst + '\\' 'image.png')
 
     model.save(dst)
-    print('Project saved succesfully')
+    logging.info('Project saved successfully')
