@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def circles_grid(n, xlim, ylim): 
     x = np.linspace(*xlim, n, endpoint=True)
     y = np.linspace(*ylim, n, endpoint=True)
@@ -15,7 +16,6 @@ def squares_grid(n, xlim, ylim):
 
 
 def add_circle(name, x_i, y_j, amodel, selections, r, alpha):
-    name = f"circle_xi_{x_i}, yj_{y_j}"
     node = amodel.create("Circle", name=name)
     node.property("r", str(r))
     node.property("pos", [str(x_i), str(y_j)])
@@ -35,7 +35,6 @@ def add_circle(name, x_i, y_j, amodel, selections, r, alpha):
 
 
 def add_square(name, x_i, y_j, amodel, selections, width, alpha):
-    name = f"square_xi_{x_i}, yj_{y_j}"
     node = amodel.create("Square", name=name)
     node.property("size", str(width))
     node.property("pos", [str(x_i), str(y_j)])

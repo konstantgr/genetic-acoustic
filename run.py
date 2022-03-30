@@ -1,14 +1,13 @@
 import logging
-
 import mph
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from utils import copy_project, clean, get_config, get_indices, make_unique
 from geometries import circles_grid, squares_grid, add_circle, add_square
-mph.option('classkit', True)
 
-import pandas as pd
+mph.option('classkit', True)
 
 
 def evaluate_global_ev(dataset: mph.Node, evaluation: mph.Node) -> pd.DataFrame:

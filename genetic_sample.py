@@ -81,7 +81,7 @@ def fitness(x, model):
 
 
 def simple_genetic(n, model):
-    bounds = [(0, 1) for i in range(n**2)]
+    bounds = [(0, 1) for _ in range(n**2)]
     result = differential_evolution(
         lambda x: fitness(x, model), 
         bounds, seed=1, maxiter=100
