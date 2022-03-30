@@ -1,6 +1,8 @@
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from scipy.optimize import differential_evolution
+import scipy.special as spc
 
 from utils import clean
 from geometries import circles_grid, add_circle
@@ -64,8 +66,22 @@ class Individual:
         self.model.mesh()
         self.model.solve()
 
-    def fitness(self):
-        return 0
+    def fitness(self, results: pd.DataFrame):
+        # ADD SIGMA_GEOM HERE!!!!
+        labels = [[f'{m}'] for m in range(10)]
+        labels = list(results)[3:]
+        k = 2*np.pi*results['Frequency']
+        R = 0.18
+        Q_multipoles = []
+
+        multipoles = range(20)
+        for m in multipoles:
+            mu = 2 if m == 0 else 1
+            bm = results[f'{m}'] / (spc.hankel1(m, R * k) * mu * np.pi * R)
+            Q_multipoles.append(2 / k * mu * np.abs(bm) ** 2)
+
+        Q_sc = results['sigma'].to_numpy()
+        return np.real(np.sum(np.min((Q_sc - np.array(Q_multipoles)) / Q_sc, axis=1)))
 
 
 def transform_to_binary(x):
