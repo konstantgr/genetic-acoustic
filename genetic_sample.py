@@ -4,8 +4,9 @@ from tqdm import tqdm
 from scipy.optimize import differential_evolution
 import scipy.special as spc
 
-from utils import clean
+from utils import clean, evaluate_global_ev
 from geometries import circles_grid, add_circle
+import pandas as pd
 
 
 class Individual:
@@ -26,6 +27,8 @@ class Individual:
             'ylim': (-0.05, 0.05),
             'n': self.n, 
         }
+
+        self.dataset = None
 
     @staticmethod
     def get_indices(x):
@@ -66,8 +69,14 @@ class Individual:
         self.model.mesh()
         self.model.solve()
 
-    def fitness(self, results: pd.DataFrame):
+        evaluation = self.model / 'evaluations' / 'Global Evaluation 1'
+        dataset = (self.model / 'datasets').children()[0]
+        dataset = evaluation.property('data', dataset)
+        self.dataset = evaluate_global_ev(dataset, evaluation)
+
+    def fitness(self):
         # ADD SIGMA_GEOM HERE!!!!
+        results = self.dataset
         labels = [[f'{m}'] for m in range(10)]
         labels = list(results)[3:]
         k = 2*np.pi*results['Frequency']
@@ -83,23 +92,52 @@ class Individual:
         Q_sc = results['sigma'].to_numpy()
         return np.real(np.sum(np.min((Q_sc - np.array(Q_multipoles)) / Q_sc, axis=1)))
 
+def print_ind(a):
+    n = int(np.sqrt(len(a)))
+    new_a = np.array(a).reshape(n, n)
+
+    s = ''
+    for i in range(n):
+        for j in range(n):
+            s += 'o ' if not new_a[i][j] else 'x '
+        s += '\n'
+        
+    return s
 
 def transform_to_binary(x):
     return [int(x_i > 0.5) for x_i in x]
 
 
-def fitness(x, model):
+def fitness(x, model, info):
     x = transform_to_binary(x)
     ind = Individual(x, model=model)
     ind.create_model()
     ind.solve()
-    return ind.fitness()
+    res = ind.fitness()
+
+    # print(res)
+    # print('=====================================')
+
+    # display information
+    if info['cnt'] % 2 == 0:
+        print('======================================================')
+        print('({}).  {}'.format(info['cnt'], res))
+        print(print_ind(x))
+        print('======================================================')
+
+    info['cnt'] += 1
+    return abs(res)
 
 
-def simple_genetic(n, model):
+def simple_genetic(model, n=2):
     bounds = [(0, 1) for _ in range(n**2)]
+    # result = differential_evolution(
+    #     lambda x: fitness(x, model), 
+    #     bounds, seed=1, maxiter=10, popsize=10
+    # )
     result = differential_evolution(
-        lambda x: fitness(x, model), 
-        bounds, seed=1, maxiter=100
+        fitness, bounds,
+        args=(model, {'cnt': 0},), 
+        maxiter=0, popsize=1, seed=2
     )
     return result.x, result.fun

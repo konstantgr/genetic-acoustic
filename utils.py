@@ -1,8 +1,9 @@
 import shutil
 import yaml
 import numpy as np
+import mph
 from collections.abc import Sequence
-
+import pandas as pd
 
 def copy_project(src, dst):
     print(f"copying\n{src}\n->\n{dst}")
@@ -32,7 +33,7 @@ def get_config(filename):
         return yaml.safe_load(f)
 
 
-def make_unique(labels: Sequence[str]) -> list:
+def make_unique(labels) -> list:
     new_labels = []
     _, real_index, counts = np.unique(labels, return_counts=True, return_inverse=True)
     for index in range(len(labels)):
@@ -42,3 +43,12 @@ def make_unique(labels: Sequence[str]) -> list:
                 new_labels.append(new_label)
                 break
     return new_labels
+
+
+def evaluate_global_ev(dataset: mph.Node, evaluation: mph.Node) -> pd.DataFrame:
+    #  https://github.com/MPh-py/MPh/blob/2b967b77352f9ce7effcd50ad4774bf5eaf731ea/mph/model.py#L425
+    evaluation.property('data', dataset)
+    java = evaluation.java
+    real, imag = java.computeResult()
+    results = np.array(real) + 1j * np.array(imag)
+    return pd.DataFrame(data=results, columns=make_unique(evaluation.property('descr')))
