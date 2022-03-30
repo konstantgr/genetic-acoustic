@@ -2,8 +2,8 @@ import shutil
 import yaml
 import numpy as np
 import mph
-from collections.abc import Sequence
 import pandas as pd
+
 
 def copy_project(src, dst):
     print(f"copying\n{src}\n->\n{dst}")

@@ -15,8 +15,8 @@ def squares_grid(n, xlim, ylim):
     return x, y
 
 
-def add_circle(name, x_i, y_j, amodel, selections, r, alpha):
-    node = amodel.create("Circle", name=name)
+def add_circle(name, x_i, y_j, geometry, selections, r, alpha):
+    node = geometry.create("Circle", name=name)
     node.property("r", str(r))
     node.property("pos", [str(x_i), str(y_j)])
     node.property("pos", [str(x_i), str(y_j)])
@@ -34,8 +34,8 @@ def add_circle(name, x_i, y_j, amodel, selections, r, alpha):
     return node, node_sel
 
 
-def add_square(name, x_i, y_j, amodel, selections, width, alpha):
-    node = amodel.create("Square", name=name)
+def add_square(name, x_i, y_j, geometry, selections, width, alpha):
+    node = geometry.create("Square", name=name)
     node.property("size", str(width))
     node.property("pos", [str(x_i), str(y_j)])
     node.property("pos", [str(x_i), str(y_j)])

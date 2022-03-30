@@ -6,7 +6,6 @@ import scipy.special as spc
 
 from utils import clean, evaluate_global_ev
 from geometries import circles_grid, add_circle
-import pandas as pd
 
 
 class Individual:
@@ -17,14 +16,16 @@ class Individual:
         self.air = model/'selections'/'air'
         self.plastic = model/'selections'/'plastic'
         self.selections = model/'selections'
-        self.amodel = model/'geometries'/'Geometry 1'
+        self.geom = model / 'geometries' / 'Geometry 1'
+
+        self.geom.java.autoRebuild('off')
 
         self.clean_all()
 
         self.indices = self.get_indices(x)
         self.initial_params = {
-            'xlim': (-0.05, 0.05),
-            'ylim': (-0.05, 0.05),
+            'xlim': (-0.03, 0.03),
+            'ylim': (-0.03, 0.03),
             'n': self.n, 
         }
 
@@ -35,10 +36,14 @@ class Individual:
         return np.nonzero(x)
 
     def clean_all(self):
-        clean(self.amodel, 'circle')
+        clean(self.geom, 'circle')
         clean(self.selections, 'circle')
-        clean(self.amodel, 'square')
+        clean(self.geom, 'square')
         clean(self.selections, 'square')
+
+        self.model.build(self.geom)
+        self.model.clear()
+        self.model.java.resetHist()
 
     def create_model(self):
         node_selections = []
@@ -54,8 +59,8 @@ class Individual:
                 name = f"circle_xi_{x_i}, yj_{y_j}"
 
                 if idx in list(self.indices[0]):
-                    node, node_sel = add_circle(name, x_i, y_j, 
-                        self.amodel, self.selections, radius, alpha)        
+                    node, node_sel = add_circle(name, x_i, y_j,
+                                                self.geom, self.selections, radius, alpha)
                     node_selections.append(node_sel)
                 else:
                     node_selections.append(None)
@@ -63,7 +68,7 @@ class Individual:
                 idx += 1
 
         self.plastic.property('input', list(np.array(node_selections)[self.indices]))
-        self.model.build(self.amodel)
+        self.model.build(self.geom)
 
     def solve(self):
         self.model.mesh()
@@ -71,8 +76,14 @@ class Individual:
 
         evaluation = self.model / 'evaluations' / 'Global Evaluation 1'
         dataset = (self.model / 'datasets').children()[0]
-        dataset = evaluation.property('data', dataset)
         self.dataset = evaluate_global_ev(dataset, evaluation)
+
+    def getLastComputationTime(self):
+        # ADD ANY STUDY SUPPORT
+        studies = (self.model / 'studies').children()
+        if len(studies) > 0:
+            return int(studies[-1].java.getLastComputationTime())
+        return -1
 
     def fitness(self):
         # ADD SIGMA_GEOM HERE!!!!
@@ -92,9 +103,10 @@ class Individual:
         Q_sc = results['sigma'].to_numpy()
         return np.real(np.sum(np.min((Q_sc - np.array(Q_multipoles)) / Q_sc, axis=1)))
 
+
 def print_ind(a):
     n = int(np.sqrt(len(a)))
-    new_a = np.array(a).reshape(n, n)
+    new_a = np.array(a).T.reshape(n, n)
 
     s = ''
     for i in range(n):
@@ -103,6 +115,7 @@ def print_ind(a):
         s += '\n'
         
     return s
+
 
 def transform_to_binary(x):
     return [int(x_i > 0.5) for x_i in x]
@@ -121,7 +134,7 @@ def fitness(x, model, info):
     # display information
     if info['cnt'] % 2 == 0:
         print('======================================================')
-        print('({}).  {}'.format(info['cnt'], res))
+        print('({}).  {:.4f} in {:.1f}s'.format(info['cnt'], res, ind.getLastComputationTime()/1000))
         print(print_ind(x))
         print('======================================================')
 

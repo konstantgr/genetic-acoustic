@@ -41,7 +41,7 @@ def plot2d(model: mph.Model, expr: str, filepath, props: dict = None):
 
 
 if __name__ == "__main__":
-    config = get_config('../config.yml')
+    config = get_config('./config.yml')
 
     src = config['source_directory']
     tmp = config['tmp_directory']
@@ -52,8 +52,13 @@ if __name__ == "__main__":
 
     client = mph.start(cores=8) # client.clear() can be used after the run
     model = client.load(tmp) # model.clear() can be used after the modeling
+    # client.java.setDefaultGeometryKernel('comsol')  # must be tested
 
-    best_x, best_res = simple_genetic(model)
+    model.parameter('max_freq', '10000[Hz]')
+    model.parameter('min_freq', '100[Hz]')
+    model.parameter('step', '100[Hz]')
+
+    best_x, best_res = simple_genetic(model, n=3)
     x = transform_to_binary(best_x)
     ind = Individual(x, model=model)
     ind.create_model()
