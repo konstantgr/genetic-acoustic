@@ -15,11 +15,9 @@ def evaluate_global_ev(dataset: mph.Node, evaluation: mph.Node) -> pd.DataFrame:
     #  https://github.com/MPh-py/MPh/blob/2b967b77352f9ce7effcd50ad4774bf5eaf731ea/mph/model.py#L425
     evaluation.property('data', dataset)
     java = evaluation.java
-    results = np.array(java.getReal())
-    if java.isComplex():
-        results = results.astype('complex')
-        results += 1j * np.array(java.getImag())
-    return pd.DataFrame(data=results.T, columns=make_unique(evaluation.property('descr')))
+    real, imag = java.computeResult()
+    results = np.array(real) + 1j * np.array(imag)
+    return pd.DataFrame(data=results, columns=make_unique(evaluation.property('descr')))
 
 
 def plot2d(model: mph.Model, expr: str, filepath, props: dict = None):
@@ -129,12 +127,12 @@ if __name__ == "__main__":
     dataset = (model / 'datasets').children()[0]
     evaluation.property('data', dataset)
 
-    logging.info(f'Evaluation : {evaluation.name()}')
-    logging.info(f'Dataset: {dataset.name()}')
-    logging.info(f'Solution: {dataset.property("solution")}')
+    print(f'Evaluation : {evaluation.name()}')
+    print(f'Dataset: {dataset.name()}')
+    print(f'Solution: {dataset.property("solution")}')
 
     evaluate_global_ev(dataset, evaluation).to_csv('result.csv')
     plot2d(model, 'acpr.p_s', images_dst + '\\' 'image.png')
 
     model.save(dst)
-    logging.info('Project saved successfully')
+    print('Project saved successfully')
