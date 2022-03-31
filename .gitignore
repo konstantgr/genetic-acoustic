@@ -132,3 +132,4 @@ config.yml
 .idea/
 samples/tmp.mph
 samples/sample1.mph
+.DS_Store
