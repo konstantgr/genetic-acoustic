@@ -25,7 +25,7 @@ class Individual(ABC):
     def getLastComputationTime(self):
         # TODO ADD ANY STUDY SUPPORT
 
-        studies = (self.model / ComsolModelAttributes.STUDIES).children()
+        studies = (self.model / 'studies').children()
         return -1 if not len(studies) else int(studies[-1].java.getLastComputationTime())
 
     def clean_geometry(self, param):
@@ -40,8 +40,8 @@ class Individual(ABC):
         self.model.mesh()
         self.model.solve()
 
-        evaluation = self.model / ComsolModelAttributes.EVALUATIONS / 'Global Evaluation 1'
-        dataset = (self.model / ComsolModelAttributes.DATASETS).children()[0]
+        evaluation = self.model / 'evaluations' / 'Global Evaluation 1'
+        dataset = (self.model / 'datasets').children()[0]
         self.dataset = evaluate_global_ev(dataset, evaluation)
 
     def fitness(self, func: Callable) -> Any:

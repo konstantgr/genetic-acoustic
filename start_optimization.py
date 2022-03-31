@@ -2,8 +2,8 @@ import mph
 
 from typing import Dict
 from utils import copy_project, get_config, plot2d
-from genetic_sample import transform_to_binary, Individual
-from simple_evolutionary_algorithms import differential_evolution_circles_scipy
+from simple_evolutionary_algorithms import differential_evolution_circles_scipy, transform_to_binary_list
+from individuals import CircleIndividual
 
 mph.option('classkit', True)
 
@@ -14,7 +14,7 @@ def read_config(cfg: Dict):
 
 
 if __name__ == "__main__":
-    config = get_config('config.yml')
+    config = get_config('../config.yml')
     src, tmp, dst, images_dst = read_config(config)
     copy_project(src, tmp)
 
@@ -29,12 +29,12 @@ if __name__ == "__main__":
     # Genetic Algorithm
     n_circle_grid = 3
     best_x, best_res = differential_evolution_circles_scipy(model, n=n_circle_grid)
-    x = transform_to_binary(best_x)
+    x = transform_to_binary_list(best_x)
 
     # Best individual
-    ind = Individual(x, model=model)
+    ind = CircleIndividual(x, model=model)
     ind.create_model()
-    ind.solve()
+    ind.solve_geometry()
 
     plot2d(model, 'acpr.p_s', images_dst + '\\' + 'best_image.png')
 

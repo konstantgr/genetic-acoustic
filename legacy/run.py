@@ -41,7 +41,7 @@ def plot2d(model: mph.Model, expr: str, filepath, props: dict = None):
 
 
 if __name__ == "__main__":
-    config = get_config('./config.yml')
+    config = get_config('../config.yml')
 
     src = config['source_directory']
     tmp = config['tmp_directory']

@@ -74,7 +74,7 @@ def plot2d(
     props: Dict = None
 ):
 
-    plots = model / ComsolModelAttributes.PLOTS
+    plots = model / 'plots'
     plots.java.setOnlyPlotWhenRequested(True)
     plot = plots.create('PlotGroup2D')
 
@@ -82,7 +82,7 @@ def plot2d(
     surface.property('resolution', 'normal')
     surface.property('expr', expr)
 
-    exports = model / ComsolModelAttributes.EXPORTS
+    exports = model / 'exports'
 
     image = exports.create('Image')
     image.property('sourceobject', plot)

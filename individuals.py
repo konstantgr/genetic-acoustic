@@ -1,4 +1,3 @@
-from tqdm import tqdm
 import numpy as np
 
 from individual_base import Individual
@@ -15,32 +14,32 @@ class CircleIndividual(Individual):
         self.clean_geometry('circle')
 
         self.config = {
-            "n": np.sqrt(x.size),
+            "n": int(np.sqrt(len(x))),
             "x_limits": (-0.03, 0.03),
             "y_limits": (-0.03, 0.03),
         }
 
     def __init_materials(self):
         materials = {
-            'air': self.model / ComsolModelAttributes.SELECTIONS / 'air',
-            'plastic': self.model / ComsolModelAttributes.SELECTIONS / 'plastic'
+            'air': self.model / f'selections' / 'air',
+            'plastic': self.model / 'selections' / 'plastic'
         }
         return materials
 
     def __init_geometry(self):
-        geometry = self.model / ComsolModelAttributes.GEOMETRIES / 'Geometry 1'
+        geometry = self.model / 'geometries' / 'Geometry 1'
         geometry.java.autoRebuild('off')
         return geometry
 
     def __init_selections(self):
-        return self.model / ComsolModelAttributes.SELECTIONS
+        return self.model / 'selections'
 
     @staticmethod
     def get_indices(x):
         return np.nonzero(x)
 
     def create_model(self):
-        indices = get_indices(self.x)
+        indices = get_indices(len(self.x))
         node_selections = []
 
         x, y = circles_grid(**self.config)
@@ -49,7 +48,7 @@ class CircleIndividual(Individual):
         alpha = 1.1
 
         idx = 0
-        for x_i in tqdm(x):
+        for x_i in x:
             for y_j in y:
                 name = f"circle_xi_{x_i}, yj_{y_j}"
 

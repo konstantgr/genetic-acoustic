@@ -29,24 +29,29 @@ def fitness(x: List, model, info: Dict):
 
     res = ind.fitness(func=high_peaks)
 
+    if abs(res) < info['best']: 
+        info['best'] = abs(res)
+
     print('=' * 30)
-    print('({}).  {:.4f} in {:.1f}s'.format(
+    print('({}).  {:.4f} in {:.1f}s [BEST: {:.4f}]'.format(
         info['iteration'], res,
-        ind.getLastComputationTime() / 1000)
-    )
+        ind.getLastComputationTime() / 1000,
+        info['best']))
     print(pretty_print_individual(x))
     print('=' * 30)
 
     info['iteration'] += 1
+
     return abs(res)
 
 
 def differential_evolution_circles_scipy(model, n=2):
     bounds = [(0, 1) for _ in range(n ** 2)]
 
+    print('SciPy Differential Evolution started...')
     result = differential_evolution(
         fitness, bounds,
-        args=(model, {'iteration': 0},),
+        args=(model, {'iteration': 0, 'best': np.Inf},),
         maxiter=0, popsize=1, seed=2
     )
     return result.x, result.fun
