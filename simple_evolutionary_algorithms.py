@@ -2,8 +2,8 @@ import numpy as np
 from scipy.optimize import differential_evolution
 from typing import List, Dict
 
-from comsol.individuals import CircleIndividual
-from comsol.fitness_functions import high_peaks
+from comsol.individuals import CircleIndividual, SquareIndividual
+from comsol.fitness_functions import high_peaks, max_sc, peaks_contribution
 
 
 def pretty_print_individual(ind: List):
@@ -23,14 +23,15 @@ def transform_to_binary_list(x):
 def fitness(x: List, model, info: Dict):
     x = transform_to_binary_list(x)
 
-    ind = CircleIndividual(x, model=model)
+    ind = SquareIndividual(x, model=model)
     ind.create_model()
+    print('Running')
     ind.solve_geometry()
 
-    res = ind.fitness(func=high_peaks)
+    res = ind.fitness(func=peaks_contribution)
 
-    if abs(res) < info['best']: 
-        info['best'] = abs(res)
+    if res < info['best']:
+        info['best'] = res
 
     print('=' * 30)
     print('({}).  {:.4f} in {:.1f}s [BEST: {:.4f}]'.format(
@@ -42,7 +43,7 @@ def fitness(x: List, model, info: Dict):
 
     info['iteration'] += 1
 
-    return abs(res)
+    return res
 
 
 def differential_evolution_circles_scipy(model, n=2):

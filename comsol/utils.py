@@ -1,9 +1,11 @@
+import os
 import shutil
 import yaml
 import mph
 import numpy as np
 import pandas as pd
 from enum import Enum
+import os
 from typing import AnyStr, Dict
 np.random.seed(42)
 
@@ -41,8 +43,19 @@ def get_indices(size, p=0.5):
     
 
 def get_config(filename):
-    with open(filename) as f:
-        return yaml.safe_load(f)
+    if os.path.exists(filename):
+        with open(filename) as f:
+            return yaml.safe_load(f)
+    else:
+        with open(filename, 'w') as f:
+            empty_config = {
+                'source_directory': r'empty_project\empty_project.mph',
+                'tmp_directory': r'samples\tmp.mph',
+                'target_directory': r'samples\sample1.mph',
+                'images_directory': r'images\best_image.png',
+            }
+            yaml.dump(empty_config, f, default_flow_style=False)
+            return empty_config
 
 
 def make_unique(labels) -> list:
