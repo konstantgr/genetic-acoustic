@@ -1,7 +1,7 @@
 import numpy as np
 
-from individual_base import Individual
-from geometries import grid, add_circle
+from .individual_base import Individual
+from .geometries import grid, add_circle
 
 
 class CircleIndividual(Individual):
