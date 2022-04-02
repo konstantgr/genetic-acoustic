@@ -4,7 +4,7 @@ import scipy.special as spc
 
 
 def high_peaks(results: pd.DataFrame) -> float:
-    k = 2 * np.pi * results['Frequency']
+    k = 2 * np.pi * results['Frequency'] / 343
     R = 0.18
     Q_multipoles = []
 

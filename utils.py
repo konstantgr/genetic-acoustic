@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from enum import Enum
 from typing import AnyStr, Dict
+np.random.seed(42)
 
 
 class ComsolModelAttributes(Enum):
@@ -34,7 +35,6 @@ def clean(obj, flag: str):
 
 
 def get_indices(size, p=0.5):
-    np.random.seed(42)
 
     is_plastic = np.random.choice([0, 1], size=(size,), p=[1 - p, p])
     return np.nonzero(is_plastic)

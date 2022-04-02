@@ -39,7 +39,7 @@ class CircleIndividual(Individual):
         return np.nonzero(x)
 
     def create_model(self):
-        indices = get_indices(len(self.x))
+        indices = self.get_indices(self.x)
         node_selections = []
 
         x, y = circles_grid(**self.config)
