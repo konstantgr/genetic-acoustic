@@ -1,11 +1,6 @@
-import logging
 import mph
-import numpy as np
-import pandas as pd
-from tqdm import tqdm
 
-from utils import copy_project, clean, get_config, get_indices, make_unique, evaluate_global_ev
-from geometries import circles_grid, squares_grid, add_circle, add_square
+from comsol.utils import copy_project, get_config
 from genetic_sample import simple_genetic, transform_to_binary, Individual
 
 mph.option('classkit', True)

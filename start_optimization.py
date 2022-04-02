@@ -1,9 +1,9 @@
 import mph
 
 from typing import Dict
-from utils import copy_project, get_config, plot2d
+from comsol.utils import copy_project, get_config, plot2d
 from simple_evolutionary_algorithms import differential_evolution_circles_scipy, transform_to_binary_list
-from individuals import CircleIndividual
+from comsol.individuals import CircleIndividual
 import os
 
 mph.option('classkit', True)

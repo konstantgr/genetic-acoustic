@@ -1,8 +1,7 @@
 import numpy as np
 
 from individual_base import Individual
-from utils import ComsolModelAttributes, get_indices
-from geometries import circles_grid, add_circle
+from geometries import grid, add_circle
 
 
 class CircleIndividual(Individual):
@@ -42,7 +41,7 @@ class CircleIndividual(Individual):
         indices = self.get_indices(self.x)
         node_selections = []
 
-        x, y = circles_grid(**self.config)
+        x, y = grid(**self.config)
         tau = abs(x[1] - x[0])
         radius = tau / 2
         alpha = 1.1

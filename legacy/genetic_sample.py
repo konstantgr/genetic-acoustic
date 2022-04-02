@@ -1,11 +1,10 @@
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 from scipy.optimize import differential_evolution
 import scipy.special as spc
 
-from utils import clean, evaluate_global_ev
-from geometries import circles_grid, add_circle
+from comsol.utils import clean, evaluate_global_ev
+from comsol.geometries import circles_grid, add_circle
 
 
 class Individual:
