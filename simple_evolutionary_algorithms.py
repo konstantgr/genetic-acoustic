@@ -2,8 +2,8 @@ import numpy as np
 from scipy.optimize import differential_evolution
 from typing import List, Dict
 
-from individuals import CircleIndividual
-from fitness_functions import high_peaks
+from comsol.individuals import CircleIndividual
+from comsol.fitness_functions import high_peaks
 
 
 def pretty_print_individual(ind: List):

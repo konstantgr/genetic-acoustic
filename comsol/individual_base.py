@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Callable, Any
 
-from utils import ComsolModelAttributes, evaluate_global_ev, clean
+from .utils import ComsolModelAttributes, evaluate_global_ev, clean
 
 
 class Individual(ABC):
