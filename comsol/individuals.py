@@ -113,11 +113,11 @@ class SquareIndividual(Individual):
         idx = 0
         for x_i in x:
             for y_j in y:
-                name = f"square_xi_{x_i}, yj_{y_j}"
+                name = f"square_xi_{x_i-tau/2}, yj_{y_j-tau/2}"
 
                 if idx in list(indices[0]):
                     node, node_sel = add_square(
-                        name, x_i, y_j,
+                        name, x_i-tau/2, y_j-tau/2,
                         self.geometry, self.selections, width, alpha
                     )
                     node_selections.append(node_sel)
