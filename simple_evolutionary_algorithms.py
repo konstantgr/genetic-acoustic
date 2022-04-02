@@ -20,8 +20,12 @@ def transform_to_binary_list(x):
     return [int(x_i > 0.5) for x_i in x]
 
 
+solved = {}
 def fitness(x: List, model, info: Dict):
     x = transform_to_binary_list(x)
+    if str(x) in solved:
+        info['iteration'] += 1
+        return solved[str(x)]
 
     ind = SquareIndividual(x, model=model)
     ind.create_model()
@@ -42,7 +46,7 @@ def fitness(x: List, model, info: Dict):
     print('=' * 30)
 
     info['iteration'] += 1
-
+    solved[str(x)] = res
     return res
 
 
@@ -53,6 +57,6 @@ def differential_evolution_circles_scipy(model, n=2):
     result = differential_evolution(
         fitness, bounds,
         args=(model, {'iteration': 0, 'best': np.Inf},),
-        maxiter=0, popsize=1, seed=2
+        maxiter=2, popsize=2, seed=2
     )
     return result.x, result.fun

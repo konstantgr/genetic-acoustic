@@ -78,8 +78,8 @@ class SquareIndividual(Individual):
 
         self.config = {
             "n": int(np.sqrt(len(x))),
-            "x_limits": (-0.03, 0.03),
-            "y_limits": (-0.03, 0.03),
+            "x_limits": (-0.01, 0.01),
+            "y_limits": (-0.01, 0.01),
         }
 
     def __init_materials(self):
