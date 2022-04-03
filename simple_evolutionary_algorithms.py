@@ -32,7 +32,9 @@ def fitness(x: List, model, info: Dict):
     print('Running')
     ind.solve_geometry()
 
-    res = ind.fitness(func=peaks_contribution)
+    # res = ind.fitness(func=peaks_contribution, R=0.18, c=343, multipole_n=1)
+    res = ind.fitness(func=high_peaks, R=0.18, c=343)
+    # res = ind.fitness(func=max_sc, )
 
     if res < info['best']:
         info['best'] = res
@@ -57,6 +59,6 @@ def differential_evolution_circles_scipy(model, n=2):
     result = differential_evolution(
         fitness, bounds,
         args=(model, {'iteration': 0, 'best': np.Inf},),
-        maxiter=2, popsize=2, seed=2
+        maxiter=0, popsize=1, seed=2
     )
     return result.x, result.fun
