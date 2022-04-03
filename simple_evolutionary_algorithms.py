@@ -1,9 +1,14 @@
 import numpy as np
+from loguru import logger
 from scipy.optimize import differential_evolution
 from typing import List, Dict
 
 from comsol.individuals import CircleIndividual, SquareIndividual
 from comsol.fitness_functions import high_peaks, max_sc, peaks_contribution
+
+
+solved = {}
+logger.add('logs/logs.log', level='INFO')
 
 
 def pretty_print_individual(ind: List):
@@ -20,7 +25,6 @@ def transform_to_binary_list(x):
     return [int(x_i > 0.5) for x_i in x]
 
 
-solved = {}
 def fitness(x: List, model, info: Dict):
     x = transform_to_binary_list(x)
     if str(x) in solved:
@@ -47,8 +51,11 @@ def fitness(x: List, model, info: Dict):
     print(pretty_print_individual(x))
     print('=' * 30)
 
+    logger.info(f"iteration {info['iteration']}\tindividual {str(x)}\tresult {res}")
+
     info['iteration'] += 1
     solved[str(x)] = res
+
     return res
 
 
