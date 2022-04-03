@@ -2,7 +2,7 @@ import mph
 
 from typing import Dict
 from comsol.utils import copy_project, get_config, plot2d
-from simple_evolutionary_algorithms import differential_evolution_circles_scipy, transform_to_binary_list
+from simple_evolutionary_algorithms import differential_evolution_scipy, transform_to_binary_list
 from comsol.individuals import CircleIndividual, SquareIndividual
 import os
 
@@ -35,8 +35,8 @@ if __name__ == "__main__":
     model.parameter('step', '100[Hz]')
 
     # Genetic Algorithm
-    n_circle_grid = 3
-    best_x, best_res = differential_evolution_circles_scipy(model, n=n_circle_grid)
+    n_grid = 5
+    best_x, best_res = differential_evolution_scipy(model, SquareIndividual, n=n_grid)
     x = transform_to_binary_list(best_x)
 
     # Best individual
