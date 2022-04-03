@@ -10,10 +10,10 @@ from comsol.fitness_functions import high_peaks, max_sc, peaks_contribution
 solved = {}
 individuals_level = logger.level("individuals", no=38)
 bests_level = logger.level("best", no=38, color="<green>")
-logger.add('logs/logs.log', level='INFO')
+logger.add('logs/logs_{time}.log', level='INFO')
 
 fmt = "{time} | {level} |\t{message}"
-logger.add('logs/individuals.log', format=fmt, level='individuals')
+logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
 
 
 def pretty_print_individual(ind: List):
