@@ -12,7 +12,6 @@ def add_circle(name, x_i, y_j, geometry, selections, r, alpha):
     node = geometry.create("Circle", name=name)
     node.property("r", str(r))
     node.property("pos", [str(x_i), str(y_j)])
-    node.property("pos", [str(x_i), str(y_j)])
 
     node_sel = selections.create('Box', name=name)
     node_sel.property('entitydim', 2)
@@ -30,7 +29,6 @@ def add_circle(name, x_i, y_j, geometry, selections, r, alpha):
 def add_square(name, x_i, y_j, geometry, selections, width, alpha):
     node = geometry.create("Square", name=name)
     node.property("size", str(width))
-    node.property("pos", [str(x_i), str(y_j)])
     node.property("pos", [str(x_i), str(y_j)])
 
     node_sel = selections.create('Box', name=name)

@@ -44,5 +44,5 @@ class Individual(ABC):
         dataset = (self.model / 'datasets').children()[0]
         self.dataset = evaluate_global_ev(dataset, evaluation)
 
-    def fitness(self, func: Callable) -> Any:
-        return func(self.dataset)
+    def fitness(self, func: Callable, *args, **kwargs) -> Any:
+        return func(self.dataset, *args, **kwargs)
