@@ -1,4 +1,4 @@
-from gendev import ComsolModel, ComsolWorker, SimpleSolver, MultiprocessingSolver
+from gendev import ComsolModel, ComsolWorker, SimpleSolver
 import numpy as np
 from utils import grid
 import os
@@ -73,11 +73,20 @@ MyWorker = ComsolWorker(SquaresModel, file_path,
 # print(MyWorker.do_the_job([1, 0, 1, 1, 0, 1, 0, 1, 0]))
 
 if __name__ == '__main__':
-    Solver = SimpleSolver(MyWorker)
+    Solver = SimpleSolver(MyWorker, workers=4)
+    print(Solver.solve(np.array([[1, 0, 1, 1, 0, 1, 0, 1, 0],
+                        [1, 0, 0, 0, 0, 0, 0, 0, 0],
+                        # [1, 0, 1, 1, 0, 1, 0, 1, 0],
+                        # [1, 0, 1, 1, 1, 1, 0, 1, 0],
+                        # [1, 0, 1, 1, 0, 1, 1, 1, 0],
+                        ])))
+
     print(Solver.solve([[1, 0, 1, 1, 0, 1, 0, 1, 0],
                         [1, 0, 0, 0, 0, 0, 0, 0, 0],
                         [1, 0, 1, 1, 0, 1, 0, 1, 0],
                         [1, 0, 1, 1, 1, 1, 0, 1, 0],
                         [1, 0, 1, 1, 0, 1, 1, 1, 0],
                         ]))
+    Solver.stop()
+
 

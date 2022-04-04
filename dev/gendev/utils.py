@@ -12,3 +12,13 @@ def make_unique(labels) -> list:
                 break
 
     return new_labels
+
+
+def x_to_solve(x, cache):
+    to_solve, cached = [], []
+    for i, p in enumerate(x):
+        if str(p) in cache:
+            cached.append(i)
+        else:
+            to_solve.append(i)
+    return to_solve, cached

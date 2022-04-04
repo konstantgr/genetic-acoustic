@@ -90,7 +90,7 @@ class ComsolModel(mph.Model, Model):
         return pd.DataFrame(data=results, columns=make_unique(evaluation.property('descr')))
 
     def clear(self):
-        super().clear()
+        # super().clear()
         super().reset()
 
     @abstractmethod

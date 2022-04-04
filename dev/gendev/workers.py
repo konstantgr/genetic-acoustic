@@ -3,11 +3,12 @@ import mph
 from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any
+from multiprocessing import Queue
 
 
 class Worker(ABC):
     @abstractmethod
-    def start(self):
+    def start(self, jobs: Queue, results: Queue, *client_args, **client_kwargs):
         pass
 
     @abstractmethod
@@ -34,13 +35,21 @@ class ComsolWorker(Worker):
         self._client_kwargs = {} if client_kwargs is None else client_kwargs
         self._filepath = filepath
         self._Model = Model
-        self._is_started = False
 
-    def start(self):
-        self.client = mph.start(*self._client_args, **self._client_kwargs)  # type: mph.client
+    def start(self, jobs: Queue, results: Queue, *client_args, **client_kwargs):
+        print('comsol init')
+        self.client = mph.start(*self._client_args, *client_args, **self._client_kwargs,
+                                **client_kwargs)  # type: mph.client
+        print(self.client.cores)
         model = self.client.load(self._filepath)
         self.model = self._Model(model)  # type: ComsolModel
-        self._is_started = True
+        self.loop(jobs, results)
+
+    def loop(self, jobs, results):
+        while True:
+            (i, p, config) = jobs.get()
+            print('comsol sol')
+            results.put((i, self.do_the_job(p, config)))
 
     def do_the_job(self, x, config=None) -> Any:
         self.model.x = x
@@ -59,3 +68,14 @@ class ComsolWorker(Worker):
         self.model.pre_clear()
         self.model.clear()
         return results
+
+
+class ComsolNetworkWorker(ComsolWorker):
+    def start(self, jobs: Queue, results: Queue, *client_args, **client_kwargs):
+        print('comsol init')
+        self.client = mph.start(*self._client_args, *client_args, **self._client_kwargs,
+                                **client_kwargs)  # type: mph.client
+        print(self.client.cores)
+        model = self.client.load(self._filepath)
+        self.model = self._Model(model)  # type: ComsolModel
+        self.loop(jobs, results)
