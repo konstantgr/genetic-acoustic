@@ -4,6 +4,8 @@ from typing import Dict
 from comsol.utils import copy_project, get_config, plot2d
 from simple_evolutionary_algorithms import differential_evolution_scipy, transform_to_binary_list
 from comsol.individuals import CircleIndividual, SquareIndividual
+from deap_genetic_algorithm import deap_algorithm
+import matplotlib.pyplot as plt
 import os
 
 mph.option('classkit', True)
@@ -36,15 +38,23 @@ if __name__ == "__main__":
 
     # Genetic Algorithm
     n_grid = 5
-    best_x, best_res = differential_evolution_scipy(model, SquareIndividual, n=n_grid)
-    x = transform_to_binary_list(best_x)
+    population, logbook = deap_algorithm(model, SquareIndividual, n=n_grid)
 
-    # Best individual
-    ind = SquareIndividual(x, model=model)
-    ind.create_model()
-    ind.solve_geometry()
+    maxFintessValues, meanFintessValues = logbook.select("min", "avg")
 
-    plot2d(model, 'acpr.p_s', images_dst)
+    plt.plot(maxFintessValues, color='red')
+    plt.plot(meanFintessValues, color='k')
+    plt.show()
 
-    model.save(dst)
-    print(f'Project saved successfully, best result: {best_res}')
+    # best_x, best_res = differential_evolution_scipy(model, SquareIndividual, n=n_grid)
+    # x = transform_to_binary_list(best_x)
+
+    # # Best individual
+    # ind = SquareIndividual(x, model=model)
+    # ind.create_model()
+    # ind.solve_geometry()
+
+    # plot2d(model, 'acpr.p_s', images_dst)
+
+    # model.save(dst)
+    # print(f'Project saved successfully, best result: {best_res}')
