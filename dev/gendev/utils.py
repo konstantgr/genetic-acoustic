@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Tuple, List
 
 def make_unique(labels) -> list:
     new_labels = []
@@ -14,7 +14,7 @@ def make_unique(labels) -> list:
     return new_labels
 
 
-def x_to_solve(tags, cache) -> tuple[list[int], list[int]]:
+def x_to_solve(tags, cache) -> Tuple[List[int], List[int]]:
     to_solve, cached = [], []
     for i, tag in enumerate(tags):
         if tag in cache:
