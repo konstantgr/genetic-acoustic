@@ -7,6 +7,11 @@ from typing import Any
 
 
 class Model(ABC):
+    def __init__(self):
+        self._x = None
+        self._args = None
+        self._kwargs = None
+
     @property
     def x(self):
         return self._x
@@ -16,12 +21,20 @@ class Model(ABC):
         self._x = x
 
     @property
-    def config(self):
-        return self._config
+    def args(self):
+        return self._args
 
-    @config.setter
-    def config(self, config):
-        self._config = config
+    @args.setter
+    def args(self, args):
+        self._args = args
+
+    @property
+    def kwargs(self):
+        return self._args
+
+    @kwargs.setter
+    def kwargs(self, kwargs):
+        self._kwargs = kwargs
 
     @abstractmethod
     def results(self) -> Any:
@@ -30,10 +43,9 @@ class Model(ABC):
 
 class ComsolModel(mph.Model, Model):
     def __init__(self, *args, **kwargs):
-        mph.Model.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
+        super(Model, self).__init__()
         self.selections = self/'selections'
-        self._x = None
-        self._config = {}
 
     def add_circle(self, name: str, x_i: float, y_j: float, geometry: mph.Node, r: float, alpha: float = 1.1):
         node = geometry.create("Circle", name=name)

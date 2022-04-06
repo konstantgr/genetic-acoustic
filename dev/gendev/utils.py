@@ -14,10 +14,10 @@ def make_unique(labels) -> list:
     return new_labels
 
 
-def x_to_solve(x, cache):
+def x_to_solve(tags, cache) -> tuple[list[int], list[int]]:
     to_solve, cached = [], []
-    for i, p in enumerate(x):
-        if str(p) in cache:
+    for i, tag in enumerate(tags):
+        if tag in cache:
             cached.append(i)
         else:
             to_solve.append(i)

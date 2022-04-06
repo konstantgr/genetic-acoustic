@@ -1,15 +1,12 @@
-from gendev import ComsolModel, ComsolWorker, SimpleSolver
+import time
+
+from gendev import ComsolModel, ComsolWorker, MultiprocessingSolver, TestLoopWorker
 import numpy as np
-from utils import grid
+from utils import grid, pretty_print_individual, get_multipoles_from_res
 import os
 from loguru import logger
-
-individuals_level = logger.level("individuals", no=38)
-bests_level = logger.level("best", no=38, color="<green>")
-logger.add('logs/logs_{time}.log', level='INFO')
-
-fmt = "{time} | {level} |\t{message}"
-logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
+from typing import List, Dict
+from scipy.optimize import differential_evolution
 
 
 class SquaresModel(ComsolModel):
@@ -23,7 +20,7 @@ class SquaresModel(ComsolModel):
         self.parameter('step', '100[Hz]')
 
         self.config = {
-            "n": 3,
+            "n": n,
             "x_limits": (-0.03, 0.03),
             "y_limits": (-0.03, 0.03),
         }
@@ -55,38 +52,99 @@ class SquaresModel(ComsolModel):
     def results(self):
         evaluation = self / 'evaluations' / 'Global Evaluation 1'
         dataset = (self / 'datasets').children()[0]
-        return self.global_evaluation(dataset, evaluation)
+
+        data = self.global_evaluation(dataset, evaluation)
+        Q_multipoles = get_multipoles_from_res(data, c=343, R=0.18)
+        return -np.real(np.max(Q_multipoles[2]))
 
     def pre_clear(self):
         # self.save(save_path)
         self.clean_geometry(self.geometry, 'circle')
 
 
+n = 3
 dirname = os.path.dirname(__file__)
 file_path = os.path.join(dirname, 'empty_project.mph')
 save_path = os.path.join(dirname, 'empty_project1.mph')
 
-MyWorker = ComsolWorker(SquaresModel, file_path,
-                        mph_options={'classkit': True},
-                        client_kwargs={'cores': 1})
-# MyWorker.start()
-# print(MyWorker.do_the_job([1, 0, 1, 1, 0, 1, 0, 1, 0]))
+
+def transform_to_binary_list(x):
+    return [int(x_i > 0.5) for x_i in x]
+
+
+def fitness(x: List, info: Dict):
+    x = transform_to_binary_list(x)
+
+    res = Solver.solve([x])[0]
+
+    individual_string = "".join(np.array(x).astype(str))
+
+    if res < info['best']:
+        info['best'] = res
+        message = f"iteration {info['iteration']} | individual {individual_string} | result {round(res, 4)}"
+        logger.log("best", message)
+
+    print('=' * 30)
+    print('({}).  {:.4f} in {:.1f}s [BEST: {:.4f}]'.format(
+        info['iteration'], res,
+        # ind.getLastComputationTime() / 1000,
+        0,
+        info['best']))
+    print(pretty_print_individual(x))
+    print('=' * 30)
+
+    logger.info(f"[BEST {round(info['best'], 4)}]\titeration {info['iteration']}\tindividual {individual_string}\tresult {round(res, 4)}\tcalculation_time {0}")
+    message = f"iteration {info['iteration']} | individual {individual_string} | result {round(res, 4)}"
+    logger.log("individuals", message)
+
+    info['iteration'] += 1
+
+    return res
+
+
+def differential_evolution_scipy():
+    bounds = [(0, 1) for _ in range(n ** 2)]
+    print('SciPy Differential Evolution started...')
+    result = differential_evolution(
+        fitness, bounds,
+        args=({'iteration': 0, 'best': np.Inf},),
+        maxiter=0, popsize=1, seed=2
+    )
+    return result.x, result.fun
+
 
 if __name__ == '__main__':
-    Solver = SimpleSolver(MyWorker, workers=4)
-    print(Solver.solve(np.array([[1, 0, 1, 1, 0, 1, 0, 1, 0],
-                        [1, 0, 0, 0, 0, 0, 0, 0, 0],
-                        # [1, 0, 1, 1, 0, 1, 0, 1, 0],
-                        # [1, 0, 1, 1, 1, 1, 0, 1, 0],
-                        # [1, 0, 1, 1, 0, 1, 1, 1, 0],
-                        ])))
+    fmt = "{time} | {level} |\t{message}"
 
-    print(Solver.solve([[1, 0, 1, 1, 0, 1, 0, 1, 0],
-                        [1, 0, 0, 0, 0, 0, 0, 0, 0],
-                        [1, 0, 1, 1, 0, 1, 0, 1, 0],
-                        [1, 0, 1, 1, 1, 1, 0, 1, 0],
-                        [1, 0, 1, 1, 0, 1, 1, 1, 0],
-                        ]))
-    Solver.stop()
+    individuals_level = logger.level("individuals", no=38)
+    bests_level = logger.level("best", no=38, color="<green>")
+    logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
 
+    logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
 
+    MyWorker = ComsolWorker(SquaresModel, file_path,
+                            mph_options={'classkit': True},
+                            client_kwargs={'cores': 1})
+    Solver = MultiprocessingSolver(MyWorker)
+
+    # Genetic Algorithm
+    try:
+        best_x, best_res = differential_evolution_scipy()
+        x = transform_to_binary_list(best_x)
+        print(x)
+        #
+        # # Best individual
+        # ind = SquareIndividual(x, model=model)
+        # ind.create_model()
+        # ind.solve_geometry()
+        #
+        # plot2d(model, 'acpr.p_s', images_dst)
+        #
+        # model.save(dst)
+
+        print(f'Project saved successfully, best result: {best_res}')
+    except Exception as e:
+        raise e
+    finally:
+        print('Solver stopped')
+        Solver.stop()
