@@ -5,7 +5,7 @@ import numpy as np
 from .models import Model
 from .workers import Worker
 from multiprocessing import Pool, Manager, Queue, JoinableQueue
-from typing import Iterable, Any, Mapping, MutableMapping, Sequence, Optional, Union
+from typing import Iterable, Any, Mapping, MutableMapping, Sequence, Optional, Union, List
 import queue
 from .utils import x_to_solve
 import time
@@ -44,7 +44,7 @@ class MultiprocessingSolver(Solver):
               args: Union[None, Sequence[Any]] = None,
               kwargs: Union[None, dict] = None,
               tags: Union[None, Sequence[Any]] = None
-              ) -> list[Any]:
+              ) -> List[Any]:
         if args is not None and len(x) != len(args):
             raise ValueError(f"len(x) != len(args): {len(x)} != {len(args)}")
         if kwargs is not None and len(x) != len(kwargs):
@@ -92,7 +92,7 @@ class SimpleSolver(Solver):
               args: Union[None, Sequence[Any]] = None,
               kwargs: Union[None, dict] = None,
               tags: Union[None, Sequence[Any]] = None
-              ) -> list[Any]:
+              ) -> List[Any]:
         if args is not None and len(x) != len(args):
             raise ValueError(f"len(x) != len(args): {len(x)} != {len(args)}")
         if kwargs is not None and len(x) != len(kwargs):
