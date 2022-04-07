@@ -3,48 +3,18 @@ import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
 from .utils import make_unique
-from typing import Any
+from typing import Any, AnyStr, Dict, Tuple
 
 
 class Model(ABC):
-    def __init__(self):
-        self._x = None
-        self._args = None
-        self._kwargs = None
-
-    @property
-    def x(self):
-        return self._x
-
-    @x.setter
-    def x(self, x):
-        self._x = x
-
-    @property
-    def args(self):
-        return self._args
-
-    @args.setter
-    def args(self, args):
-        self._args = args
-
-    @property
-    def kwargs(self):
-        return self._args
-
-    @kwargs.setter
-    def kwargs(self, kwargs):
-        self._kwargs = kwargs
-
     @abstractmethod
-    def results(self) -> Any:
+    def results(self, x, args: Tuple, kwargs: Dict) -> Any:
         pass
 
 
 class ComsolModel(mph.Model, Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        super(Model, self).__init__()
         self.selections = self/'selections'
 
     def add_circle(self, name: str, x_i: float, y_j: float, geometry: mph.Node, r: float, alpha: float = 1.1):
@@ -105,16 +75,47 @@ class ComsolModel(mph.Model, Model):
         # super().clear()
         super().reset()
 
+    def plot2d(self, expr: AnyStr, filepath: AnyStr, props: Dict = None):
+        plots = self / 'plots'
+        plots.java.setOnlyPlotWhenRequested(True)
+        plot = plots.create('PlotGroup2D')
+
+        surface = plot.create('Surface', name='plot2d')
+        surface.property('resolution', 'normal')
+        surface.property('expr', expr)
+
+        exports = self / 'exports'
+
+        image = exports.create('Image')
+        image.property('sourceobject', plot)
+        image.property('filename', filepath)
+        default_props = {
+            'size': 'manualweb',
+            'unit': 'px',
+            'height': '720',
+            'width': '720'
+        }
+
+        for prop in default_props:
+            image.property(prop, default_props[prop])
+        if props is not None:
+            for prop in props:
+                image.property(prop, props[prop])
+
+        self.export()
+        image.remove()
+        plot.remove()
+
     @abstractmethod
-    def results(self) -> Any:
+    def results(self, x, *args: Any, **kwargs: Any) -> Any:
         pass
 
-    def pre_build(self):
+    def pre_build(self, x, *args: Any, **kwargs: Any):
         pass
 
-    def pre_solve(self):
+    def pre_solve(self, x, *args: Any, **kwargs: Any):
         pass
 
-    def pre_clear(self):
+    def pre_clear(self, x, *args: Any, **kwargs: Any):
         pass
 

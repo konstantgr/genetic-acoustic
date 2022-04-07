@@ -115,3 +115,6 @@ class SimpleSolver(Solver):
         return results
 
 
+# class MPISolver(Solver):
+
+

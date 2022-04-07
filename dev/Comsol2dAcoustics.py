@@ -1,3 +1,4 @@
+import sys
 import time
 
 from gendev import ComsolModel, ComsolWorker, MultiprocessingSolver, TestLoopWorker
@@ -25,17 +26,17 @@ class SquaresModel(ComsolModel):
             "y_limits": (-0.03, 0.03),
         }
 
-    def pre_build(self):
-        indices = np.nonzero(self.x)
+    def pre_build(self, x, *args, **kwargs):
+        indices = np.nonzero(x)
         node_selections = []
 
-        x, y = grid(**self.config)
-        tau = abs(x[1] - x[0])
+        xgrid, ygrid = grid(**self.config)
+        tau = abs(xgrid[1] - xgrid[0])
         radius = tau / 2
 
         idx = 0
-        for x_i in x:
-            for y_j in y:
+        for x_i in xgrid:
+            for y_j in ygrid:
                 name = f"circle_xi_{x_i}, yj_{y_j}"
 
                 if idx in list(indices[0]):
@@ -49,16 +50,17 @@ class SquaresModel(ComsolModel):
             'input', list(np.array(node_selections)[indices])
         )
 
-    def results(self):
+    def results(self, x, *args, **kwargs):
         evaluation = self / 'evaluations' / 'Global Evaluation 1'
         dataset = (self / 'datasets').children()[0]
-
         data = self.global_evaluation(dataset, evaluation)
         Q_multipoles = get_multipoles_from_res(data, c=343, R=0.18)
         return -np.real(np.max(Q_multipoles[2]))
 
-    def pre_clear(self):
-        # self.save(save_path)
+    def pre_clear(self, x, save=False, *args, **kwargs):
+        if save:
+            self.save(save_path)
+            self.plot2d('acpr.p_s', image_path)
         self.clean_geometry(self.geometry, 'circle')
 
 
@@ -66,6 +68,7 @@ n = 3
 dirname = os.path.dirname(__file__)
 file_path = os.path.join(dirname, 'empty_project.mph')
 save_path = os.path.join(dirname, 'empty_project1.mph')
+image_path = os.path.join(dirname, 'image.png')
 
 
 def transform_to_binary_list(x):
@@ -115,11 +118,12 @@ def differential_evolution_scipy():
 
 if __name__ == '__main__':
     fmt = "{time} | {level} |\t{message}"
-
     individuals_level = logger.level("individuals", no=38)
     bests_level = logger.level("best", no=38, color="<green>")
-    logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
+    logger.remove()
+    logger.add(sys.stdout, level='INFO', format=fmt, enqueue=True)
 
+    logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
     logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
 
     MyWorker = ComsolWorker(SquaresModel, file_path,
@@ -127,20 +131,14 @@ if __name__ == '__main__':
                             client_kwargs={'cores': 1})
     Solver = MultiprocessingSolver(MyWorker)
 
-    # Genetic Algorithm
     try:
+        # Genetic Algorithm
         best_x, best_res = differential_evolution_scipy()
         x = transform_to_binary_list(best_x)
         print(x)
-        #
-        # # Best individual
-        # ind = SquareIndividual(x, model=model)
-        # ind.create_model()
-        # ind.solve_geometry()
-        #
-        # plot2d(model, 'acpr.p_s', images_dst)
-        #
-        # model.save(dst)
+
+        # Best individual
+        Solver.solve([x], kwargs={'save': True})
 
         print(f'Project saved successfully, best result: {best_res}')
     except Exception as e:

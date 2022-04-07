@@ -6,6 +6,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any
 from multiprocessing import Queue
+from loguru import logger
 
 
 class Worker(ABC):
@@ -36,18 +37,17 @@ class ComsolWorker(Worker):
         self._Model = Model
 
     def start(self, jobs: Queue, results: Queue, *client_args, **client_kwargs):
-        print('comsol init')
         for option in self._mph_options:
             mph.option(option, self._mph_options[option])
 
         self.client = mph.start(*self._client_args, *client_args, **self._client_kwargs,
                                 **client_kwargs)  # type: mph.client
-        print(self.client.cores)
         model = self.client.load(self._filepath)
         self.model = self._Model(model)  # type: ComsolModel
         self.loop(jobs, results)
 
     def loop(self, jobs, results):
+        logger.info('Comsol started')
         while True:
             (i, p, args, kwargs) = jobs.get()
             res = self.do_the_job(p, args, kwargs)
@@ -55,20 +55,17 @@ class ComsolWorker(Worker):
             jobs.task_done()
 
     def do_the_job(self, x, args, kwargs) -> Any:
-        self.model.x = x
-        self.model.args = args
-        self.model.kwargs = kwargs
-
-        self.model.pre_build()
+        if args is None:
+            args = tuple()
+        if kwargs is None:
+            kwargs = dict()
+        self.model.pre_build(x, *args, **kwargs)
         self.model.build()
-        self.model.pre_solve()
+        self.model.pre_solve(x, *args, **kwargs)
         self.model.mesh()
-        print('Running')
         self.model.solve()
-        print('results')
-        results = self.model.results()
-        print('pre_clear')
-        self.model.pre_clear()
+        results = self.model.results(x, *args, **kwargs)
+        self.model.pre_clear(x, *args, **kwargs)
         self.model.clear()
         return results
 
