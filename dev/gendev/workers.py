@@ -6,6 +6,10 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple
 from multiprocessing import JoinableQueue, Queue
+from mpi4py import MPI
+
+import logging
+logger = logging.getLogger(__package__)
 
 
 class Worker(ABC):
@@ -102,6 +106,12 @@ class ComsolMultiprocessingWorker(ComsolWorker, MultiprocessingWorker):
             res = self.do_the_job(args, kwargs)
             results.put((i, res))
             jobs.task_done()
+
+
+class MPIWorker(SimpleWorker):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start()
 
 
 class TestLoopWorker(Worker):
