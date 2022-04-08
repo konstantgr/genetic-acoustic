@@ -1,7 +1,7 @@
 import sys
-import time
 
-from gendev import ComsolModel, ComsolWorker, MultiprocessingSolver, TestLoopWorker
+from gendev import ComsolModel, ComsolMultiprocessingWorker, MultiprocessingSolver, TestLoopWorker, SimpleSolver,\
+    ComsolWorker, Task
 import numpy as np
 from utils import grid, pretty_print_individual, get_multipoles_from_res
 import os
@@ -11,20 +11,20 @@ from scipy.optimize import differential_evolution
 
 
 class SquaresModel(ComsolModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
         self.geometry = self / 'geometries' / 'Geometry 1'
-        self.geometry.java.autoRebuild('off')
-
-        self.parameter('max_freq', '1000[Hz]')
-        self.parameter('min_freq', '100[Hz]')
-        self.parameter('step', '100[Hz]')
-
         self.config = {
             "n": n,
             "x_limits": (-0.03, 0.03),
             "y_limits": (-0.03, 0.03),
         }
+
+    def configure(self):
+        self.geometry.java.autoRebuild('off')
+        self.parameter('max_freq', '1000[Hz]')
+        self.parameter('min_freq', '100[Hz]')
+        self.parameter('step', '100[Hz]')
 
     def pre_build(self, x, *args, **kwargs):
         indices = np.nonzero(x)
@@ -32,7 +32,7 @@ class SquaresModel(ComsolModel):
 
         xgrid, ygrid = grid(**self.config)
         tau = abs(xgrid[1] - xgrid[0])
-        radius = tau / 2
+        width = tau
 
         idx = 0
         for x_i in xgrid:
@@ -40,22 +40,20 @@ class SquaresModel(ComsolModel):
                 name = f"circle_xi_{x_i}, yj_{y_j}"
 
                 if idx in list(indices[0]):
-                    node, node_sel = self.add_circle(name, x_i, y_j, self.geometry, radius)
+                    node, node_sel = self.add_square(name, x_i, y_j, self.geometry, width)
                     node_selections.append(node_sel)
                 else:
                     node_selections.append(None)
                 idx += 1
 
-        (self.selections/'plastic').property(
+        (self/'selections'/'plastic').property(
             'input', list(np.array(node_selections)[indices])
         )
 
     def results(self, x, *args, **kwargs):
         evaluation = self / 'evaluations' / 'Global Evaluation 1'
         dataset = (self / 'datasets').children()[0]
-        data = self.global_evaluation(dataset, evaluation)
-        Q_multipoles = get_multipoles_from_res(data, c=343, R=0.18)
-        return -np.real(np.max(Q_multipoles[2]))
+        return self.global_evaluation(dataset, evaluation)
 
     def pre_clear(self, x, save=False, *args, **kwargs):
         if save:
@@ -78,7 +76,13 @@ def transform_to_binary_list(x):
 def fitness(x: List, info: Dict):
     x = transform_to_binary_list(x)
 
-    res = Solver.solve([x])[0]
+    data = Solver.solve([
+        Task(x=x, tag=str(x))
+    ])
+    data = data[0]
+
+    Q_multipoles = get_multipoles_from_res(data, c=343, R=0.18)
+    res = -np.real(np.max(Q_multipoles[2]))
 
     individual_string = "".join(np.array(x).astype(str))
 
@@ -96,7 +100,8 @@ def fitness(x: List, info: Dict):
     print(pretty_print_individual(x))
     print('=' * 30)
 
-    logger.info(f"[BEST {round(info['best'], 4)}]\titeration {info['iteration']}\tindividual {individual_string}\tresult {round(res, 4)}\tcalculation_time {0}")
+    logger.info(
+        f"[BEST {round(info['best'], 4)}]\titeration {info['iteration']}\tindividual {individual_string}\tresult {round(res, 4)}\tcalculation_time {0}")
     message = f"iteration {info['iteration']} | individual {individual_string} | result {round(res, 4)}"
     logger.log("individuals", message)
 
@@ -126,10 +131,15 @@ if __name__ == '__main__':
     logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
     logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
 
-    MyWorker = ComsolWorker(SquaresModel, file_path,
+    # MyWorker = ComsolMultiprocessingWorker(SquaresModel(), file_path,
+    #                                        mph_options={'classkit': True},
+    #                                        client_kwargs={'cores': 1})
+    # Solver = MultiprocessingSolver(MyWorker)
+
+    MyWorker = ComsolWorker(SquaresModel(), file_path,
                             mph_options={'classkit': True},
                             client_kwargs={'cores': 1})
-    Solver = MultiprocessingSolver(MyWorker)
+    Solver = SimpleSolver(MyWorker, caching=True)
 
     try:
         # Genetic Algorithm
@@ -138,7 +148,7 @@ if __name__ == '__main__':
         print(x)
 
         # Best individual
-        Solver.solve([x], kwargs={'save': True})
+        Solver.solve([Task(x=x, save=True, tag=str(x))])
 
         print(f'Project saved successfully, best result: {best_res}')
     except Exception as e:

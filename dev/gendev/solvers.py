@@ -1,30 +1,47 @@
 import multiprocessing
 from abc import ABC, abstractmethod
+from .workers import Worker, MultiprocessingWorker
+from multiprocessing import Queue, JoinableQueue
+from typing import Any, Sequence, Union, List, Hashable
+from queue import Empty
 
-import numpy as np
-from .models import Model
-from .workers import Worker
-from multiprocessing import Pool, Manager, Queue, JoinableQueue
-from typing import Iterable, Any, Mapping, MutableMapping, Sequence, Optional, Union, List
-import queue
 from .utils import x_to_solve
 import time
+
+# TODO add info to return after solve()
+
+
+class Task:
+    def __init__(self, *args, **kwargs):
+        if 'tag' in kwargs:
+            tag = kwargs.pop('tag')
+            if not isinstance(tag, Hashable):
+                raise ValueError('Tag must be Hashable')
+            self.tag = tag
+        else:
+            self.tag = None
+        self.args = args
+        self.kwargs = kwargs
 
 
 class Solver(ABC):
     @abstractmethod
-    def solve(self, x, config=None):
+    def solve(self, tasks: Sequence[Task]) -> List[Any]:
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
 
 class MultiprocessingSolver(Solver):
     def __init__(self,
-                 worker: Union[Worker, Sequence[Worker]],
+                 worker: Union[MultiprocessingWorker, Sequence[MultiprocessingWorker]],
                  workers_num: Union[int, Sequence] = 1,
                  caching: bool = False
                  ):
-        # if not isinstance(worker, Worker):
-        #     raise TypeError('Worker has to be the object of type Worker')
         self.worker = worker if isinstance(worker, Sequence) else [worker]
         self.workers_num = workers_num if isinstance(workers_num, Sequence) else [workers_num]
         self.caching = caching
@@ -40,37 +57,32 @@ class MultiprocessingSolver(Solver):
                 process.start()
                 self.workers.append(process)
 
-    def solve(self, x: Sequence[Any],
-              args: Union[None, Sequence[Any]] = None,
-              kwargs: Union[None, dict] = None,
-              tags: Union[None, Sequence[Any]] = None
-              ) -> List[Any]:
-        if args is not None and len(x) != len(args):
-            raise ValueError(f"len(x) != len(args): {len(x)} != {len(args)}")
-        if kwargs is not None and len(x) != len(kwargs):
-            raise ValueError(f"len(x) != len(kwargs): {len(x)} != {len(kwargs)}")
-        if tags is not None and len(x) != len(tags):
-            raise ValueError(f"len(x) != len(tags): {len(x)} != {len(tags)}")
-
-        if self.caching and tags is not None:
-            to_solve, cached = x_to_solve(tags, self.cache)
+    def solve(self, tasks: Sequence[Task]) -> List[Any]:
+        self.check_processes()
+        if self.caching:
+            to_solve, cached = x_to_solve(tasks, self.cache)
         else:
-            to_solve, cached = range(len(x)), []
+            to_solve, cached = range(len(tasks)), []
 
-        results = [None for _ in x]
-        for i, p in enumerate(x):
+        results = [None for _ in tasks]
+        for i, task in enumerate(tasks):
             if i in to_solve:
-                self._jobs.put((i, p, args, kwargs))
+                self._jobs.put((i, task.args, task.kwargs))
             else:
-                results[i] = self.cache[tags[i]] if tags is not None else None
+                results[i] = self.cache[task.tag] if task.tag is not None else None
 
-        self._jobs.join()
+        # self._jobs.join()
         for i in range(len(to_solve)):
-            (i, r) = self._results.get()
-            if self.caching and tags is not None:
-                self.cache[tags[i]] = r
-            results[i] = r
-
+            while True:
+                try:
+                    (i, r) = self._results.get(block=False)
+                    if self.caching and tasks[i].tag is not None:
+                        self.cache[tasks[i].tag] = r
+                    results[i] = r
+                    break
+                except Empty:
+                    self.check_processes()
+                    time.sleep(0.1)
         return results
 
     def stop(self):
@@ -78,6 +90,14 @@ class MultiprocessingSolver(Solver):
             worker.terminate()
             worker.join()
             worker.close()
+
+    def check_processes(self):
+        for worker in self.workers:
+            if not worker.is_alive():
+                raise RuntimeError('Dead worker')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
 
 
 class SimpleSolver(Solver):
@@ -88,33 +108,87 @@ class SimpleSolver(Solver):
         self.caching = caching
         self.cache = {}
 
-    def solve(self, x: Sequence[Any],
-              args: Union[None, Sequence[Any]] = None,
-              kwargs: Union[None, dict] = None,
-              tags: Union[None, Sequence[Any]] = None
-              ) -> List[Any]:
-        if args is not None and len(x) != len(args):
-            raise ValueError(f"len(x) != len(args): {len(x)} != {len(args)}")
-        if kwargs is not None and len(x) != len(kwargs):
-            raise ValueError(f"len(x) != len(kwargs): {len(x)} != {len(kwargs)}")
-        if tags is not None and len(x) != len(tags):
-            raise ValueError(f"len(x) != len(tags): {len(x)} != {len(tags)}")
+        self.worker.start()
 
-        if self.caching and tags is not None:
-            to_solve, cached = x_to_solve(tags, self.cache)
+    def solve(self, tasks: Sequence[Task]) -> List[Any]:
+        if self.caching:
+            to_solve, cached = x_to_solve(tasks, self.cache)
         else:
-            to_solve, cached = range(len(x)), []
+            to_solve, cached = range(len(tasks)), []
 
-        results = [None for _ in x]
-        for i, p in enumerate(x):
+        results = [None for _ in tasks]
+        for i, task in enumerate(tasks):
             if i in to_solve:
-                results[i] = self.worker.do_the_job(p, args, kwargs)
+                results[i] = self.worker.do_the_job(task.args, task.kwargs)
             else:
-                results[i] = self.cache[tags[i]] if tags is not None else None
-
+                results[i] = self.cache[task.tag] if task.tag is not None else None
         return results
 
 
-# class MPISolver(Solver):
-
-
+class MPISolver(Solver):
+    pass
+#     def __init__(self,
+#                  worker: MultiprocessingWorker,
+#                  workers_num: int = 1,
+#                  caching: bool = False,
+#                  ):
+#         self.worker = worker
+#         self.workers_num = workers_num
+#         self.caching = caching
+#         self.cache = {}
+#         self.workers = []
+#
+#         self._jobs = JoinableQueue()
+#         self._results = Queue()
+#
+#         for worker, num in zip(self.worker, self.workers_num):
+#             for i in range(num):
+#                 process = multiprocessing.Process(target=worker.start, args=(self._jobs, self._results))
+#                 process.start()
+#                 self.workers.append(process)
+#
+#     def solve(self, tasks: Sequence[Task]) -> List[Any]:
+#         self.check_processes()
+#         if self.caching:
+#             to_solve, cached = x_to_solve(tasks, self.cache)
+#         else:
+#             to_solve, cached = range(len(tasks)), []
+#
+#         results = [None for _ in tasks]
+#         for i, task in enumerate(tasks):
+#             if i in to_solve:
+#                 self._jobs.put((i, task.args, task.kwargs))
+#             else:
+#                 results[i] = self.cache[task.tag] if task.tag is not None else None
+#
+#         # self._jobs.join()
+#         for i in range(len(to_solve)):
+#             while True:
+#                 try:
+#                     (i, r) = self._results.get(block=False)
+#                     if self.caching and tasks[i].tag is not None:
+#                         self.cache[tasks[i].tag] = r
+#                     results[i] = r
+#                     break
+#                 except Empty:
+#                     self.check_processes()
+#                     time.sleep(0.1)
+#         return results
+#
+#     def stop(self):
+#         for worker in self.workers:
+#             worker.terminate()
+#             worker.join()
+#             worker.close()
+#
+#     def check_processes(self):
+#         for worker in self.workers:
+#             if not worker.is_alive():
+#                 raise RuntimeError('Dead worker')
+#
+#     def __enter__(self):
+#         return self
+#
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         self.stop()
+#

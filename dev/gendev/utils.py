@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple, List
 
+
 def make_unique(labels) -> list:
     new_labels = []
     _, real_index, counts = np.unique(labels, return_counts=True, return_inverse=True)
@@ -14,10 +15,12 @@ def make_unique(labels) -> list:
     return new_labels
 
 
-def x_to_solve(tags, cache) -> Tuple[List[int], List[int]]:
+def x_to_solve(tasks, cache) -> Tuple[List[int], List[int]]:
     to_solve, cached = [], []
-    for i, tag in enumerate(tags):
-        if tag in cache:
+    for i, task in enumerate(tasks):
+        if task.tag is None:
+            raise ValueError('If caching is True all the tasks must have a tag property')
+        if task.tag in cache:
             cached.append(i)
         else:
             to_solve.append(i)

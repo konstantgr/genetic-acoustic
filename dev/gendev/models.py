@@ -3,26 +3,27 @@ import pandas as pd
 import numpy as np
 from abc import ABC, abstractmethod
 from .utils import make_unique
-from typing import Any, AnyStr, Dict, Tuple
+from typing import Any, AnyStr, Dict
 
 
 class Model(ABC):
     @abstractmethod
-    def results(self, x, args: Tuple, kwargs: Dict) -> Any:
+    def results(self, *args, **kwargs) -> Any:
         pass
 
 
+# TODO SMUTHI Model
+
 class ComsolModel(mph.Model, Model):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.selections = self/'selections'
+    def __init__(self):
+        super().__init__(None)
 
     def add_circle(self, name: str, x_i: float, y_j: float, geometry: mph.Node, r: float, alpha: float = 1.1):
         node = geometry.create("Circle", name=name)
         node.property("r", str(r))
         node.property("pos", [str(x_i), str(y_j)])
 
-        node_sel = self.selections.create('Box', name=name)
+        node_sel = (self/'selections').create('Box', name=name)
         node_sel.property('entitydim', 2)
 
         modified_r = r * alpha
@@ -37,16 +38,17 @@ class ComsolModel(mph.Model, Model):
     def add_square(self, name: str, x_i: float, y_j: float, geometry: mph.Node, width: float, alpha: float = 1.1):
         node = geometry.create("Square", name=name)
         node.property("size", str(width))
+        node.property("base", "center")
         node.property("pos", [str(x_i), str(y_j)])
 
-        node_sel = self.selections.create('Box', name=name)
+        node_sel = (self/'selections').create('Box', name=name)
         node_sel.property('entitydim', 2)
 
         modified_width = width / 2 * alpha
-        node_sel.property('xmin', f'+{x_i}-{modified_width}+{width / 2}')
-        node_sel.property('xmax', f'+{x_i}+{modified_width}+{width / 2}')
-        node_sel.property('ymin', f'+{y_j}-{modified_width}+{width / 2}')
-        node_sel.property('ymax', f'+{y_j}+{modified_width}+{width / 2}')
+        node_sel.property('xmin', f'+{x_i}-{modified_width}')
+        node_sel.property('xmax', f'+{x_i}+{modified_width}')
+        node_sel.property('ymin', f'+{y_j}-{modified_width}')
+        node_sel.property('ymax', f'+{y_j}+{modified_width}')
         node_sel.property('condition', 'inside')
 
         return node, node_sel
@@ -59,7 +61,7 @@ class ComsolModel(mph.Model, Model):
 
     def clean_geometry(self, geometry: mph.Node, tag):
         self._clean(geometry, tag)
-        self._clean(self.selections, tag)
+        self._clean(self/'selections', tag)
         self.build(geometry)
 
     @staticmethod
@@ -106,8 +108,17 @@ class ComsolModel(mph.Model, Model):
         image.remove()
         plot.remove()
 
+    def getLastComputationTime(self):
+        # TODO ADD ANY STUDY SUPPORT
+
+        studies = (self / 'studies').children()
+        return -1 if not len(studies) else int(studies[-1].java.getLastComputationTime())
+
     @abstractmethod
     def results(self, x, *args: Any, **kwargs: Any) -> Any:
+        pass
+
+    def configure(self) -> Any:
         pass
 
     def pre_build(self, x, *args: Any, **kwargs: Any):
@@ -118,4 +129,3 @@ class ComsolModel(mph.Model, Model):
 
     def pre_clear(self, x, *args: Any, **kwargs: Any):
         pass
-
