@@ -1,5 +1,5 @@
 import sys
-sys.path.append('')
+sys.path.append('.')
 
 from gendev import SimpleMPIWorker, Model, MPISolver, Task
 import time

@@ -1,5 +1,5 @@
 import sys
-sys.path.append('')
+sys.path.append('.')
 
 from gendev import ComsolModel, Task, Solver
 import numpy as np

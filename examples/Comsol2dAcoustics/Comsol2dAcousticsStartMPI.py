@@ -1,5 +1,7 @@
 from Comsol2dAcoustics import *
 import sys
+sys.path.append('.')
+from gendev import ComsolMPIWorker, MPISolver
 
 import logging
 l = logging.getLogger('gendev')
@@ -20,8 +22,6 @@ if __name__ == '__main__':
     myWorker = ComsolMPIWorker(model, file_path,
                                mph_options={'classkit': True},
                                client_kwargs={'cores': 1})
-    # myWorker = ComsolWorker(model, file_path, mph_options={'classkit': True}, client_kwargs={'cores': 1})
-    # or use MultiprocessingSolver(myWorker) instead of SimpleSolver
     with MPISolver(myWorker, caching=True) as solver:
         # Genetic Algorithm
         best_x, best_res = differential_evolution_scipy(solver)

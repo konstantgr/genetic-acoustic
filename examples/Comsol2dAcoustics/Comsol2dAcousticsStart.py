@@ -1,5 +1,8 @@
 from Comsol2dAcoustics import *
 import sys
+sys.path.append('.')
+from gendev import ComsolMultiprocessingWorker, ComsolWorker, MultiprocessingSolver, MultiprocessingSolver
+
 
 if __name__ == '__main__':
     fmt = "{time} | {level} |\t{message}"
