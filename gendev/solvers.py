@@ -90,6 +90,8 @@ class MultiprocessingSolver(Solver):
                 process.start()
                 self.workers.append(process)
         self.total_workers = len(self.workers)
+        if self.total_workers <= 0:
+            raise RuntimeError('At least 1 worker is needed')
 
     def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
         results = [None for _ in tasks]
@@ -153,6 +155,8 @@ class MPISolver(Solver):
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.processes = self.comm.Get_size() - 1
+        if self.processes < 1:
+            raise RuntimeError(f'Not enough processes! Need at least 2, detected {self.processes}.')
         self.total_workers = self.processes
 
         if self.rank != 0:
