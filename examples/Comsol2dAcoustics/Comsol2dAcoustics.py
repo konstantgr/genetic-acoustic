@@ -92,16 +92,14 @@ def fitness(x: List, info: Dict, solver: Solver):
         logger.log("best", message)
 
     print('=' * 30)
-    print('({}).  {:.4f} in {:.1f}s [BEST: {:.4f}]'.format(
+    print('({}).  {:.4f} [BEST: {:.4f}]'.format(
         info['iteration'], res,
-        # ind.getLastComputationTime() / 1000,
-        0,
         info['best']))
     print(pretty_print_individual(x))
     print('=' * 30)
 
     logger.info(
-        f"[BEST {round(info['best'], 4)}]\titeration {info['iteration']}\tindividual {individual_string}\tresult {round(res, 4)}\tcalculation_time {0}")
+        f"[BEST {round(info['best'], 4)}]\titeration {info['iteration']}\tindividual {individual_string}\tresult {round(res, 4)}")
     message = f"iteration {info['iteration']} | individual {individual_string} | result {round(res, 4)}"
     logger.log("individuals", message)
 
