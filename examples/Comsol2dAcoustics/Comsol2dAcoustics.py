@@ -1,5 +1,7 @@
+import sys
+sys.path.append('')
+
 from gendev import ComsolModel, Task, Solver
-from gendev import ComsolMultiprocessingWorker, MultiprocessingSolver, SimpleSolver, ComsolWorker
 import numpy as np
 from utils import grid, pretty_print_individual, get_multipoles_from_res
 import os

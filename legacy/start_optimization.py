@@ -22,7 +22,7 @@ def read_path_config(cfg: Dict):
 
 
 if __name__ == "__main__":
-    config = get_config(filename=os.path.join(dirname, 'config.yml'))
+    config = get_config(filename=os.path.join(dirname, '../config.yml'))
     src, tmp, dst, images_dst = read_path_config(config)
     copy_project(src, tmp)
 

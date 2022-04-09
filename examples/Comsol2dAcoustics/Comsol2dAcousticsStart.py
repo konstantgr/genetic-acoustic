@@ -1,5 +1,3 @@
-import multiprocessing
-
 from Comsol2dAcoustics import *
 import sys
 

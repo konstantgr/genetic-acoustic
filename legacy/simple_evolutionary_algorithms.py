@@ -3,9 +3,7 @@ from loguru import logger
 from scipy.optimize import differential_evolution
 from typing import List, Dict
 
-from comsol.individuals import CircleIndividual, SquareIndividual
-from comsol.fitness_functions import high_peaks, max_sc, peaks_contribution
-
+from legacy.comsol.fitness_functions import high_peaks
 
 solved = {}
 individuals_level = logger.level("individuals", no=38)

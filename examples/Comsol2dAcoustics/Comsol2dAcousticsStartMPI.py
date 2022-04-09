@@ -1,7 +1,10 @@
-import multiprocessing
-from gendev import ComsolMPIWorker, MPISolver
 from Comsol2dAcoustics import *
 import sys
+
+import logging
+l = logging.getLogger('gendev')
+l.setLevel(logging.DEBUG)
+l.addHandler(logging.StreamHandler(sys.stdout))
 
 if __name__ == '__main__':
     fmt = "{time} | {level} |\t{message}"
