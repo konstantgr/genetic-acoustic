@@ -1,6 +1,9 @@
 from Comsol2dAcoustics import *
 import sys
-sys.path.append('.')
+import os
+dirname = os.path.dirname(__file__)
+sys.path.append(os.path.dirname(dirname))
+
 from gendev import ComsolMPIWorker, MPISolver
 
 import logging

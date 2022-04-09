@@ -1,5 +1,7 @@
 import sys
-sys.path.append('.')
+import os
+dirname = os.path.dirname(__file__)
+sys.path.append(os.path.dirname(dirname))
 
 from gendev import ComsolModel, Task, Solver
 import numpy as np
