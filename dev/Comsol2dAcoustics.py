@@ -1,7 +1,6 @@
 import sys
 
-from gendev import ComsolModel, ComsolMultiprocessingWorker, MultiprocessingSolver, TestLoopWorker, SimpleSolver,\
-    ComsolWorker, Task
+from gendev import ComsolModel, ComsolMultiprocessingWorker, MultiprocessingSolver, SimpleSolver, ComsolWorker, Task
 import numpy as np
 from utils import grid, pretty_print_individual, get_multipoles_from_res
 import os
@@ -131,21 +130,20 @@ if __name__ == '__main__':
     logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
     logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
 
-    # MyWorker = ComsolMultiprocessingWorker(SquaresModel(), file_path,
-    #                                        mph_options={'classkit': True},
-    #                                        client_kwargs={'cores': 1})
-    # Solver = MultiprocessingSolver(MyWorker)
+    MyWorker = ComsolMultiprocessingWorker(SquaresModel(), file_path,
+                                           mph_options={'classkit': True},
+                                           client_kwargs={'cores': 1})
+    Solver = MultiprocessingSolver(MyWorker)
 
-    MyWorker = ComsolWorker(SquaresModel(), file_path,
-                            mph_options={'classkit': True},
-                            client_kwargs={'cores': 1})
-    Solver = SimpleSolver(MyWorker, caching=True)
+    # MyWorker = ComsolWorker(SquaresModel(), file_path,
+    #                         mph_options={'classkit': True},
+    #                         client_kwargs={'cores': 1})
+    # Solver = SimpleSolver(MyWorker, caching=True)
 
     try:
         # Genetic Algorithm
         best_x, best_res = differential_evolution_scipy()
         x = transform_to_binary_list(best_x)
-        print(x)
 
         # Best individual
         Solver.solve([Task(x=x, save=True, tag=str(x))])

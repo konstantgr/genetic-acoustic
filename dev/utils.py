@@ -3,6 +3,7 @@ from typing import Sequence
 import pandas as pd
 import scipy.special as spc
 
+
 def grid(n, x_limits, y_limits):
     x = np.linspace(*x_limits, n, endpoint=True)
     y = np.linspace(*y_limits, n, endpoint=True)

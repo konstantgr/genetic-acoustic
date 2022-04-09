@@ -6,7 +6,6 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Tuple
 from multiprocessing import JoinableQueue, Queue
-from mpi4py import MPI
 
 import logging
 logger = logging.getLogger(__package__)
@@ -27,6 +26,13 @@ class MultiprocessingWorker(Worker):
     def start(self, jobs: JoinableQueue, results: Queue):
         pass
 
+    def loop(self, jobs, results):
+        while True:
+            (i, args, kwargs) = jobs.get()
+            res = self.do_the_job(args, kwargs)
+            results.put((i, res))
+            jobs.task_done()
+
 
 class SimpleWorker(Worker):
     def __init__(self, model: Model):
@@ -42,13 +48,6 @@ class SimpleWorker(Worker):
 class SimpleMultiprocessingWorker(SimpleWorker, MultiprocessingWorker):
     def start(self, jobs: JoinableQueue, results: Queue):
         self.loop(jobs, results)
-
-    def loop(self, jobs, results):
-        while True:
-            (i, args, kwargs) = jobs.get()
-            res = self.do_the_job(args, kwargs)
-            results.put((i, res))
-            jobs.task_done()
 
     def do_the_job(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Any:
         return self.model.results(*args, **kwargs)
@@ -92,23 +91,17 @@ class ComsolWorker(Worker):
 
 class ComsolMultiprocessingWorker(ComsolWorker, MultiprocessingWorker):
     def start(self, jobs: JoinableQueue, results: Queue):
-        for option in self._mph_options:
-            mph.option(option, self._mph_options[option])
-
-        self.client = mph.start(*self._client_args, **self._client_kwargs)  # type: mph.client
-        self.model.java = self.client.load(self._filepath).java
-        self.model.configure()
-        self.loop(jobs, results)
-
-    def loop(self, jobs, results):
-        while True:
-            (i, args, kwargs) = jobs.get()
-            res = self.do_the_job(args, kwargs)
-            results.put((i, res))
-            jobs.task_done()
+        super().start()
+        super(ComsolWorker, self).loop(jobs, results)
 
 
 class MPIWorker(SimpleWorker):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start()
+
+
+class ComsolMPIWorker(ComsolWorker):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.start()

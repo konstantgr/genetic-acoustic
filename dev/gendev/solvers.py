@@ -128,6 +128,8 @@ class SimpleSolver(Solver):
         for i, task in enumerate(tasks):
             if i in to_solve:
                 results[i] = self.worker.do_the_job(task.args, task.kwargs)
+                if self.caching and tasks[i].tag is not None:
+                    self.cache[task.tag] = results[i]
             else:
                 results[i] = self.cache[task.tag] if task.tag is not None else None
         return results
@@ -159,13 +161,25 @@ class MPISolver(Solver):
 
         # future = self.executor.submit(self.worker.start)
 
-    def solve(self, tasks: Sequence[Task]):
-        f = []
-        for task in tasks:
-            f.append(self.executor.submit(self.worker.do_the_job, task.args, task.kwargs))
+    def solve(self, tasks: Sequence[Task]) -> List[Any]:
+        if self.caching:
+            to_solve, cached = x_to_solve(tasks, self.cache)
+        else:
+            to_solve, cached = range(len(tasks)), []
 
-        for k in f:
-            k.result()
+        results = [None for _ in tasks]
+        requests = []
+        for i, task in enumerate(tasks):
+            if i in to_solve:
+                requests.append(self.executor.submit(self.worker.do_the_job, task.args, task.kwargs))
+            else:
+                results[i] = self.cache[task.tag] if task.tag is not None else None
+
+        for i in to_solve:
+            results[i] = requests.pop().result()
+            if self.caching and tasks[i].tag is not None:
+                self.cache[tasks[i].tag] = results[i]
+        return results
 
     # def start_listening(self):
     #     logger.debug('start_listening')
@@ -215,9 +229,6 @@ class MPISolver(Solver):
     def stop(self):
         if self.executor is not None:
             self.executor.shutdown()
-        pass
-        # self.comm.bcast((None, None, None))
-        # logger.debug(MPI.Is_finalized())
 
     def __enter__(self):
         return self

@@ -1,5 +1,3 @@
-import mpi4py.MPI
-
 from gendev import MPIWorker, Model, MPISolver, Task
 import time
 
@@ -20,11 +18,10 @@ class MyModel(Model):
         return res
 
 
-# MPI solver
-
 if __name__ == '__main__':
     tasks = [Task(9999) for _ in range(800)]
     model = MyModel()
+    # MPI solver
     worker = MPIWorker(model)
     solver = MPISolver(worker)
     if solver.rank == 0:
