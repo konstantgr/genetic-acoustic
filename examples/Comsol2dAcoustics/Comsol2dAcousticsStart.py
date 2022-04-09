@@ -2,7 +2,7 @@ from Comsol2dAcoustics import *
 import sys
 import os
 dirname = os.path.dirname(__file__)
-sys.path.append(os.path.dirname(dirname))
+sys.path.append(os.path.dirname(os.path.dirname(dirname)))
 
 from gendev import ComsolMultiprocessingWorker, ComsolWorker, MultiprocessingSolver, MultiprocessingSolver
 

@@ -120,7 +120,7 @@ class ComsolWorker(Worker):
     def start(self):
         for option in self._mph_options:
             mph.option(option, self._mph_options[option])
-
+        logger.debug(f'Opening COMSOL model {self._filepath}')
         self.client = mph.start(*self._client_args, **self._client_kwargs)  # type: mph.client
         self.model.java = self.client.load(self._filepath).java
         self.model.configure()
