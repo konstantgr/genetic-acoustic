@@ -1,5 +1,5 @@
 import sys
-sys.path.append('')
+sys.path.append('.')
 
 from gendev import SimpleWorker, Model, SimpleSolver, Task, MultiprocessingSolver, SimpleMultiprocessingWorker
 import time
