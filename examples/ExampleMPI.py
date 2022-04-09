@@ -12,6 +12,13 @@ class MyModel(Model):
             res *= i+1
         return res
 
+import logging
+l = logging.getLogger('gendev.solver')
+l.addHandler(logging.StreamHandler(sys.stdout))
+l.setLevel(logging.INFO)
+l = logging.getLogger('gendev.worker')
+l.addHandler(logging.StreamHandler(sys.stdout))
+l.setLevel(logging.DEBUG)
 
 if __name__ == '__main__':
     '''

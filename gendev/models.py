@@ -13,6 +13,7 @@ class Model(ABC):
 
 
 # TODO SMUTHI Model
+# TODO logging here
 
 class ComsolModel(mph.Model, Model):
     def __init__(self):

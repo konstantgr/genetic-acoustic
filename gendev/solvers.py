@@ -1,7 +1,7 @@
 import multiprocessing
 import queue
 from abc import ABC, abstractmethod
-from .workers import Worker, MultiprocessingWorker
+from .workers import Worker, MultiprocessingWorker, MPIWorker
 from multiprocessing import Queue, JoinableQueue
 from typing import Any, Sequence, Union, List, Hashable
 from queue import Empty
@@ -10,15 +10,14 @@ from mpi4py import MPI
 import mpi4py
 from mpi4py.futures import MPIPoolExecutor, MPICommExecutor
 import threading
+import time
 
 from .utils import x_to_solve
-import time
 
 # TODO add info to return after solve()
 
 import logging
-import sys
-logger = logging.getLogger(__package__)
+logger = logging.getLogger(__package__ + '.solver')
 
 
 class Task:
@@ -26,7 +25,7 @@ class Task:
         if 'tag' in kwargs:
             tag = kwargs.pop('tag')
             if not isinstance(tag, Hashable):
-                raise ValueError('Tag must be Hashable')
+                raise TypeError('Tag must be Hashable')
             self.tag = tag
         else:
             self.tag = None
@@ -35,8 +34,29 @@ class Task:
 
 
 class Solver(ABC):
-    @abstractmethod
+    def __init__(self):
+        self.caching = False
+        self.cache = {}
+        self.total_workers = 0
+
     def solve(self, tasks: Sequence[Task]) -> List[Any]:
+        if self.caching:
+            to_solve, cached = x_to_solve(tasks, self.cache)
+        else:
+            to_solve, cached = range(len(tasks)), []
+
+        logger.info(f'Starting to solve {len(tasks)} tasks with {self.total_workers} workers: '
+                    f'{len(cached)} solutions will be reused')
+        start_time = time.time()
+
+        res = self._solve(tasks, to_solve, cached)
+
+        end_time = time.time()
+        logger.info(f'All the tasks have been solved in {round(end_time-start_time, 2)}s')
+        return res
+
+    @abstractmethod
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
         pass
 
     def __enter__(self):
@@ -52,10 +72,13 @@ class MultiprocessingSolver(Solver):
                  workers_num: Union[int, Sequence] = 1,
                  caching: bool = False
                  ):
-        self.worker = worker if isinstance(worker, Sequence) else [worker]
-        self.workers_num = workers_num if isinstance(workers_num, Sequence) else [workers_num]
-        self.caching = caching
-        self.cache = {}
+        super(MultiprocessingSolver, self).__init__()
+        self.worker = worker if isinstance(worker, Sequence) else [worker]  # type: Sequence[MultiprocessingWorker]
+        if isinstance(workers_num, Sequence):
+            self.workers_num = workers_num
+        else:
+            self.workers_num = [workers_num for _ in range(len(self.worker))]   # type: Sequence[int]
+
         self.workers = []
 
         self._jobs = JoinableQueue()
@@ -63,16 +86,12 @@ class MultiprocessingSolver(Solver):
 
         for worker, num in zip(self.worker, self.workers_num):
             for i in range(num):
-                process = multiprocessing.Process(target=worker.start, args=(self._jobs, self._results), daemon=True)
+                process = multiprocessing.Process(target=worker.start_loop, args=(self._jobs, self._results), daemon=True)
                 process.start()
                 self.workers.append(process)
+        self.total_workers = len(self.workers)
 
-    def solve(self, tasks: Sequence[Task]) -> List[Any]:
-        if self.caching:
-            to_solve, cached = x_to_solve(tasks, self.cache)
-        else:
-            to_solve, cached = range(len(tasks)), []
-
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
         results = [None for _ in tasks]
         for i, task in enumerate(tasks):
             if i in to_solve:
@@ -105,18 +124,13 @@ class SimpleSolver(Solver):
     def __init__(self, worker: Worker, caching: bool = False):
         if not isinstance(worker, Worker):
             raise TypeError('Worker has to be the object of type Worker')
-        self.worker = worker
+        super(SimpleSolver, self).__init__()
         self.caching = caching
-        self.cache = {}
-
+        self.worker = worker
         self.worker.start()
+        self.total_workers = 1
 
-    def solve(self, tasks: Sequence[Task]) -> List[Any]:
-        if self.caching:
-            to_solve, cached = x_to_solve(tasks, self.cache)
-        else:
-            to_solve, cached = range(len(tasks)), []
-
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
         results = [None for _ in tasks]
         for i, task in enumerate(tasks):
             if i in to_solve:
@@ -129,32 +143,26 @@ class SimpleSolver(Solver):
 
 
 class MPISolver(Solver):
-    def __init__(self, worker: Worker, caching: bool = False, buffer_size: int = 32768):
-        if not isinstance(worker, Worker):
-            raise TypeError('Worker has to be the object of type Worker')
+    def __init__(self, worker: MPIWorker, caching: bool = False, buffer_size: int = 32768):
+        if not isinstance(worker, MPIWorker):
+            raise TypeError('Worker has to be the object of type MPIWorker')
+        super(MPISolver, self).__init__()
         self.worker = worker
         self.caching = caching
-        self.cache = {}
-
         self.buffer_size = buffer_size
-
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.processes = self.comm.Get_size() - 1
+        self.total_workers = self.processes
 
         if self.rank != 0:
             logger.debug(f'Starting loop in {self.comm.Get_rank()}')
-            self.worker.start()
+            self.worker.start_loop()
             # self.start_listening()
             MPI.Finalize()
             exit()
 
-    def solve(self, tasks: Sequence[Task]) -> List[Any]:
-        if self.caching:
-            to_solve, cached = x_to_solve(tasks, self.cache)
-        else:
-            to_solve, cached = range(len(tasks)), []
-
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
         results = [None for _ in tasks]
         requests = []
         for i, task in enumerate(tasks):
