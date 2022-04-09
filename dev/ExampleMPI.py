@@ -1,13 +1,5 @@
-from gendev import MPIWorker, Model, MPISolver, Task
+from gendev import SimpleMPIWorker, Model, MPISolver, Task
 import time
-
-import logging
-import sys
-
-logger = logging.getLogger('gendev')
-fh = logging.StreamHandler(sys.stdout)
-logger.addHandler(fh)
-logger.setLevel(logging.DEBUG)
 
 
 class MyModel(Model):
@@ -19,14 +11,16 @@ class MyModel(Model):
 
 
 if __name__ == '__main__':
-    tasks = [Task(9999) for _ in range(800)]
+    '''
+    mpiexec -np 4 py -m mpi4py .\ExampleMPI.py
+    '''
+    tasks = [Task(99999) for _ in range(5)]
     model = MyModel()
+
     # MPI solver
-    worker = MPIWorker(model)
-    solver = MPISolver(worker)
-    if solver.rank == 0:
+    worker = SimpleMPIWorker(model)
+    with MPISolver(worker, buffer_size=2**20) as solver:
         start = time.time()
         results = solver.solve(tasks)
         end = time.time()
         print(f'MPI solver used {round(end-start, 4)}s')
-    solver.stop()

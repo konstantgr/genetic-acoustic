@@ -1,4 +1,5 @@
 import multiprocessing
+import queue
 from abc import ABC, abstractmethod
 from .workers import Worker, MultiprocessingWorker
 from multiprocessing import Queue, JoinableQueue
@@ -8,6 +9,7 @@ import numpy as np
 from mpi4py import MPI
 import mpi4py
 from mpi4py.futures import MPIPoolExecutor, MPICommExecutor
+import threading
 
 from .utils import x_to_solve
 import time
@@ -61,12 +63,11 @@ class MultiprocessingSolver(Solver):
 
         for worker, num in zip(self.worker, self.workers_num):
             for i in range(num):
-                process = multiprocessing.Process(target=worker.start, args=(self._jobs, self._results))
+                process = multiprocessing.Process(target=worker.start, args=(self._jobs, self._results), daemon=True)
                 process.start()
                 self.workers.append(process)
 
     def solve(self, tasks: Sequence[Task]) -> List[Any]:
-        self.check_processes()
         if self.caching:
             to_solve, cached = x_to_solve(tasks, self.cache)
         else:
@@ -79,33 +80,25 @@ class MultiprocessingSolver(Solver):
             else:
                 results[i] = self.cache[task.tag] if task.tag is not None else None
 
-        # self._jobs.join()
-        for i in range(len(to_solve)):
-            while True:
-                try:
-                    (i, r) = self._results.get(block=False)
-                    if self.caching and tasks[i].tag is not None:
-                        self.cache[tasks[i].tag] = r
-                    results[i] = r
-                    break
-                except Empty:
-                    self.check_processes()
-                    time.sleep(0.1)
+        for k in range(len(to_solve)):
+            (i, r) = self._results.get()
+            if i == -1:
+                raise RuntimeError
+            if self.caching and tasks[i].tag is not None:
+                self.cache[tasks[i].tag] = r
+            results[i] = r
         return results
 
     def stop(self):
         for worker in self.workers:
-            worker.terminate()
-            worker.join()
-            worker.close()
-
-    def check_processes(self):
-        for worker in self.workers:
-            if not worker.is_alive():
-                raise RuntimeError('Dead worker')
+            if worker.is_alive():
+                worker.terminate()
+                worker.join()
+                worker.close()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
+        return False
 
 
 class SimpleSolver(Solver):
@@ -136,30 +129,25 @@ class SimpleSolver(Solver):
 
 
 class MPISolver(Solver):
-    def __init__(self, worker: Worker, caching: bool = False):
+    def __init__(self, worker: Worker, caching: bool = False, buffer_size: int = 32768):
         if not isinstance(worker, Worker):
             raise TypeError('Worker has to be the object of type Worker')
         self.worker = worker
         self.caching = caching
         self.cache = {}
 
+        self.buffer_size = buffer_size
+
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.processes = self.comm.Get_size() - 1
 
-        # if self.rank != 0:
-        #     self.worker.start()
-        #     self.start_listening()
-        #     exit()
-        self.executor = MPICommExecutor().__enter__()
-        # if self.executor is not None:
-        #     self.executor.submit(self.worker.start)
-            # future.cancel()
-
-        # self.executor = MPIPoolExecutor(max_workers=3, initializer=self.worker.start)
-        # future = self.executor.submit(self.worker.start)
-
-        # future = self.executor.submit(self.worker.start)
+        if self.rank != 0:
+            logger.debug(f'Starting loop in {self.comm.Get_rank()}')
+            self.worker.start()
+            # self.start_listening()
+            MPI.Finalize()
+            exit()
 
     def solve(self, tasks: Sequence[Task]) -> List[Any]:
         if self.caching:
@@ -171,64 +159,24 @@ class MPISolver(Solver):
         requests = []
         for i, task in enumerate(tasks):
             if i in to_solve:
-                requests.append(self.executor.submit(self.worker.do_the_job, task.args, task.kwargs))
+                dest = len(requests) % self.processes+1
+                req = self.comm.isend((i, task.args, task.kwargs), dest=dest, tag=i)
+                req.wait()
+                requests.append(self.comm.irecv(self.buffer_size, source=dest))
             else:
                 results[i] = self.cache[task.tag] if task.tag is not None else None
 
-        for i in to_solve:
-            results[i] = requests.pop().result()
+        for p in range(len(requests)):
+            i, r = requests[p].wait()
             if self.caching and tasks[i].tag is not None:
-                self.cache[tasks[i].tag] = results[i]
+                self.cache[tasks[i].tag] = r
+            results[i] = r
         return results
 
-    # def start_listening(self):
-    #     logger.debug('start_listening')
-    #     while True:
-    #         req = self.comm.irecv(source=0)
-    #         (i, args, kwargs) = req.wait()
-    #         logger.debug(str((i, args, kwargs)))
-    #         if i is None:
-    #             return 1
-    #         res = self.worker.do_the_job(args, kwargs)
-    #         req = self.comm.isend((i, res), dest=0)
-    #         req.wait()
-    #
-    # def solve(self, tasks: Sequence[Task]) -> List[Any]:
-    #     if self.caching:
-    #         to_solve, cached = x_to_solve(tasks, self.cache)
-    #     else:
-    #         to_solve, cached = range(len(tasks)), []
-    #
-    #     results = [None for _ in tasks]
-    #     requests = []
-    #     for i, task in enumerate(tasks):
-    #         if i in to_solve:
-    #             dest = len(requests) % self.processes+1
-    #             req = self.comm.isend((i, task.args, task.kwargs), dest=dest, tag=i)
-    #             req.wait()
-    #             requests.append(self.comm.irecv(source=dest))
-    #         else:
-    #             results[i] = self.cache[task.tag] if task.tag is not None else None
-    #
-    #     # self._jobs.join()
-    #     for _ in range(len(to_solve)):
-    #         while True:
-    #             if len(requests) == 0:
-    #                 break
-    #             for p in range(len(requests)):
-    #                 test, res = requests[p].test()
-    #                 if test is True:
-    #                     i, r = res
-    #                     if self.caching and tasks[i].tag is not None:
-    #                         self.cache[tasks[i].tag] = r
-    #                     results[i] = r
-    #                     requests.pop(p)
-    #                     break
-    #             time.sleep(0.1)
-    #     return results
     def stop(self):
-        if self.executor is not None:
-            self.executor.shutdown()
+        for i in range(1, self.comm.Get_size()):
+            req = self.comm.isend((None, None, None), dest=i)
+            req.wait()
 
     def __enter__(self):
         return self

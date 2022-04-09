@@ -11,8 +11,9 @@ class MyModel(Model):
 
 
 if __name__ == '__main__':
-    tasks = [Task(9999) for _ in range(800)]
+    tasks = [Task(99999) for _ in range(5)]
     model = MyModel()
+
     # Simple solver
     worker = SimpleWorker(model)
     with SimpleSolver(worker) as solver:
@@ -23,8 +24,8 @@ if __name__ == '__main__':
 
     # Multiprocessing solver
     worker = SimpleMultiprocessingWorker(model)
-    with MultiprocessingSolver(worker, workers_num=2) as solver:
+    with MultiprocessingSolver(worker, workers_num=4) as solver:
         start = time.time()
         results = solver.solve(tasks)
         end = time.time()
-    print(f'Multiprocessing solver used {round(end - start, 2)}s')
+        print(f'Multiprocessing solver used {round(end - start, 2)}s')

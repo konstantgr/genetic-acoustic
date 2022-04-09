@@ -1,4 +1,6 @@
+import mpi4py.MPI
 import numpy as np
+import sys
 
 from .models import ComsolModel, Model
 import mph
@@ -27,11 +29,34 @@ class MultiprocessingWorker(Worker):
         pass
 
     def loop(self, jobs, results):
+        try:
+            while True:
+                (i, args, kwargs) = jobs.get()
+                res = self.do_the_job(args, kwargs)
+                results.put((i, res))
+                jobs.task_done()
+        except Exception as e:
+            results.put((-1, e))
+            raise e
+
+
+class MPIWorker(Worker):
+    @abstractmethod
+    def start(self, jobs: JoinableQueue, results: Queue):
+        pass
+
+    def loop(self):
+        comm = mpi4py.MPI.COMM_WORLD
+        logger.debug(f'Loop started in {comm.Get_rank()}')
         while True:
-            (i, args, kwargs) = jobs.get()
+            req = comm.irecv(source=0)
+            (i, args, kwargs) = req.wait()
+            logger.debug(f"{(i, args, kwargs)} received in {comm.Get_rank()}")
+            if i is None and args is None and kwargs is None:
+                return
             res = self.do_the_job(args, kwargs)
-            results.put((i, res))
-            jobs.task_done()
+            req = comm.isend((i, res), dest=0)
+            req.wait()
 
 
 class SimpleWorker(Worker):
@@ -48,6 +73,14 @@ class SimpleWorker(Worker):
 class SimpleMultiprocessingWorker(SimpleWorker, MultiprocessingWorker):
     def start(self, jobs: JoinableQueue, results: Queue):
         self.loop(jobs, results)
+
+    def do_the_job(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Any:
+        return self.model.results(*args, **kwargs)
+
+
+class SimpleMPIWorker(SimpleWorker, MPIWorker):
+    def start(self):
+        self.loop()
 
     def do_the_job(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Any:
         return self.model.results(*args, **kwargs)
@@ -95,30 +128,7 @@ class ComsolMultiprocessingWorker(ComsolWorker, MultiprocessingWorker):
         super(ComsolWorker, self).loop(jobs, results)
 
 
-class MPIWorker(SimpleWorker):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.start()
-
-
-class ComsolMPIWorker(ComsolWorker):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.start()
-
-
-class TestLoopWorker(Worker):
-    def start(self, jobs: JoinableQueue, results: Queue, *client_args, **client_kwargs):
-        self.loop(jobs, results)
-
-    def loop(self, jobs, results):
-        while True:
-            (i, p, args, kwargs) = jobs.get()
-            print('loop sol')
-            results.put((i, self.do_the_job(args, kwargs)))
-            jobs.task_done()
-
-    def do_the_job(self, args, kwargs) -> Any:
-        for i in range(99999999):
-            np.sqrt(9999999999)
-        return 1
+class ComsolMPIWorker(ComsolWorker, MPIWorker):
+    def start(self):
+        super().start()
+        super().loop()

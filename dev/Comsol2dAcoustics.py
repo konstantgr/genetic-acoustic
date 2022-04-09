@@ -1,6 +1,5 @@
-import sys
-
-from gendev import ComsolModel, ComsolMultiprocessingWorker, MultiprocessingSolver, SimpleSolver, ComsolWorker, Task
+from gendev import ComsolModel, Task, Solver
+from gendev import ComsolMultiprocessingWorker, MultiprocessingSolver, SimpleSolver, ComsolWorker
 import numpy as np
 from utils import grid, pretty_print_individual, get_multipoles_from_res
 import os
@@ -72,12 +71,10 @@ def transform_to_binary_list(x):
     return [int(x_i > 0.5) for x_i in x]
 
 
-def fitness(x: List, info: Dict):
+def fitness(x: List, info: Dict, solver: Solver):
     x = transform_to_binary_list(x)
 
-    data = Solver.solve([
-        Task(x=x, tag=str(x))
-    ])
+    data = solver.solve([Task(x=x, tag=str(x))])
     data = data[0]
 
     Q_multipoles = get_multipoles_from_res(data, c=343, R=0.18)
@@ -109,48 +106,12 @@ def fitness(x: List, info: Dict):
     return res
 
 
-def differential_evolution_scipy():
+def differential_evolution_scipy(solver: Solver):
     bounds = [(0, 1) for _ in range(n ** 2)]
     print('SciPy Differential Evolution started...')
     result = differential_evolution(
         fitness, bounds,
-        args=({'iteration': 0, 'best': np.Inf},),
+        args=({'iteration': 0, 'best': np.Inf}, solver, ),
         maxiter=0, popsize=1, seed=2
     )
     return result.x, result.fun
-
-
-if __name__ == '__main__':
-    fmt = "{time} | {level} |\t{message}"
-    individuals_level = logger.level("individuals", no=38)
-    bests_level = logger.level("best", no=38, color="<green>")
-    logger.remove()
-    logger.add(sys.stdout, level='INFO', format=fmt, enqueue=True)
-
-    logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
-    logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
-
-    MyWorker = ComsolMultiprocessingWorker(SquaresModel(), file_path,
-                                           mph_options={'classkit': True},
-                                           client_kwargs={'cores': 1})
-    Solver = MultiprocessingSolver(MyWorker)
-
-    # MyWorker = ComsolWorker(SquaresModel(), file_path,
-    #                         mph_options={'classkit': True},
-    #                         client_kwargs={'cores': 1})
-    # Solver = SimpleSolver(MyWorker, caching=True)
-
-    try:
-        # Genetic Algorithm
-        best_x, best_res = differential_evolution_scipy()
-        x = transform_to_binary_list(best_x)
-
-        # Best individual
-        Solver.solve([Task(x=x, save=True, tag=str(x))])
-
-        print(f'Project saved successfully, best result: {best_res}')
-    except Exception as e:
-        raise e
-    finally:
-        print('Solver stopped')
-        Solver.stop()
