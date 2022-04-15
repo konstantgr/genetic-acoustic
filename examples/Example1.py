@@ -1,17 +1,17 @@
 import sys
 import os
-# adding gendev package folder to path
+# adding hpctool package folder to path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from gendev import SimpleWorker, Model, SimpleSolver, Task, MultiprocessingSolver, SimpleMultiprocessingWorker
+from hpctool import SimpleWorker, Model, SimpleSolver, Task, MultiprocessingSolver, SimpleMultiprocessingWorker
 
 # adding logging for solver and workers
 # Be careful with multiprocessing and file logging at the same time
 import logging
-gs = logging.getLogger('gendev.solver')
+gs = logging.getLogger('hpctool.solver')
 gs.addHandler(logging.StreamHandler(sys.stdout))
 gs.setLevel(logging.INFO)
-gw = logging.getLogger('gendev.worker')
+gw = logging.getLogger('hpctool.worker')
 gw.addHandler(logging.StreamHandler(sys.stdout))
 gw.setLevel(logging.DEBUG)
 

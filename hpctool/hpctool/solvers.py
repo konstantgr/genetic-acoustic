@@ -14,7 +14,8 @@ import time
 
 from .utils import x_to_solve
 
-# TODO add info to return after solve()
+# TODO add info to return after .solve()
+# TODO add additional threads to control workers' errors
 
 import logging
 logger = logging.getLogger(__package__ + '.solver')
@@ -73,6 +74,7 @@ class MultiprocessingSolver(Solver):
                  caching: bool = False
                  ):
         super(MultiprocessingSolver, self).__init__()
+        self.caching = caching
         self.worker = worker if isinstance(worker, Sequence) else [worker]  # type: Sequence[MultiprocessingWorker]
         if isinstance(workers_num, Sequence):
             self.workers_num = workers_num

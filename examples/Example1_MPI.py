@@ -1,17 +1,17 @@
 import sys
 import os
-# adding gendev package folder to path
+# adding hpctool package folder to path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from gendev import SimpleMPIWorker, Model, MPISolver, Task
+from hpctool import SimpleMPIWorker, Model, MPISolver, Task
 
 # adding logging for solver and workers
 # Do not use any FileHandlers here. Use them after "with Solver as solver"
 import logging
-gs = logging.getLogger('gendev.solver')
+gs = logging.getLogger('hpctool.solver')
 gs.addHandler(logging.StreamHandler(sys.stdout))
 gs.setLevel(logging.INFO)
-gw = logging.getLogger('gendev.worker')
+gw = logging.getLogger('hpctool.worker')
 gw.addHandler(logging.StreamHandler(sys.stdout))
 gw.setLevel(logging.DEBUG)
 

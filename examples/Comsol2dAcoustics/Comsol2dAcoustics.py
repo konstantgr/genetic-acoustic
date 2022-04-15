@@ -1,15 +1,12 @@
-import sys
-import os
-dirname = os.path.dirname(__file__)
-sys.path.append(os.path.dirname(os.path.dirname(dirname)))
-
-from gendev import ComsolModel, Task, Solver
+from hpctool import ComsolModel, Task, Solver
 import numpy as np
 from utils import grid, pretty_print_individual, get_multipoles_from_res
 import os
+import sys
 from loguru import logger
 from typing import List, Dict
 from scipy.optimize import differential_evolution
+import logging
 
 
 class SquaresModel(ComsolModel):
@@ -108,7 +105,20 @@ def fitness(x: List, info: Dict, solver: Solver):
     return res
 
 
-def differential_evolution_scipy(solver: Solver):
+def main(solver: Solver):
+    fmt = "{time} | {level} |\t{message}"
+    individuals_level = logger.level("individuals", no=38)
+    bests_level = logger.level("best", no=38, color="<green>")
+    logger.remove()
+    logger.add(sys.stdout, level='INFO', format=fmt, enqueue=True)
+    logger.add('logs/logs_{time}.log', level='INFO', format=fmt)
+    logger.add('logs/individuals_{time}.log', format=fmt, level='individuals')
+
+    # Solver logging
+    _l = logging.getLogger('gendev')
+    _l.setLevel(logging.DEBUG)
+    _l.addHandler(logging.StreamHandler(sys.stdout))
+
     bounds = [(0, 1) for _ in range(n ** 2)]
     print('SciPy Differential Evolution started...')
     result = differential_evolution(
@@ -116,4 +126,8 @@ def differential_evolution_scipy(solver: Solver):
         args=({'iteration': 0, 'best': np.Inf}, solver, ),
         maxiter=0, popsize=1, seed=2
     )
-    return result.x, result.fun
+    x = transform_to_binary_list(result.x)
+
+    # Best individual
+    solver.solve([Task(x=x, save=True, tag=str(x))])
+    print(f'Project saved successfully, best result: {result.fun}')

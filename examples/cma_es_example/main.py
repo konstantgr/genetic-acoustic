@@ -2,9 +2,9 @@ import numpy as np
 from cmaes import CMA
 from scipy.stats import linregress
 import logging
-from gendev import Model, Task, Solver
-
-logger = logging.getLogger('main')
+from hpctool import Model, Task, Solver
+import sys
+import matplotlib.pyplot as plt
 
 
 class SimpleIndividual:
@@ -16,7 +16,7 @@ class SimpleIndividual:
 
 class MyModel(Model):
     def results(self, x, *args, **kwargs):
-        return fitness_maximize_determinant(x)
+        return fitness(x)
 
 
 def get_slope(values):
@@ -91,8 +91,8 @@ def cma_es_optimizer(
         mean_values.append(np.array(tmp).mean())
         optimizer.tell(solutions)
 
-    print(f'Best value is {best_value}',
-          f'Best individual is {best_individual}', sep='\n')
+    logger.info(f'Best value is {best_value}')
+    logger.info(f'Best individual is {best_individual}')
 
     res = {
         'best_value': best_value,
@@ -102,3 +102,27 @@ def cma_es_optimizer(
     }
 
     return res
+
+
+logger = logging.getLogger('main')
+gs = logging.getLogger('hpctool.solver')
+gs.addHandler(logging.StreamHandler(sys.stdout))
+gs.setLevel(logging.INFO)
+# gw = logging.getLogger('hpctool.worker')
+# gw.addHandler(logging.StreamHandler(sys.stdout))
+# gw.setLevel(logging.DEBUG)
+
+
+def main(solver: Solver):
+    logger.addHandler(logging.StreamHandler(sys.stdout))
+    logger.setLevel(logging.INFO)
+
+    ind = SimpleIndividual(np.array([(-2, 2) for i in range(2)]))
+    result = cma_es_optimizer(ind, solver)
+    mean_values = result['mean_values']
+    best_x, best_y = result['best_values']
+
+    plt.plot(range(len(mean_values)), mean_values)
+    plt.scatter(best_x, best_y)
+    plt.savefig('image.png')
+    logger.info('done')
