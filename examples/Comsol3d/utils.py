@@ -10,6 +10,22 @@ def grid(n, x_limits, y_limits):
     return x, y
 
 
+def linear_grid(radii, separations):
+    assert(len(radii) - 1 == len(separations))
+
+    tmp_position = 0
+    num_cylinders = len(radii)
+    x = []
+    for i in range(num_cylinders):
+        tmp_position += separations[i]
+        x.append(tmp_position)
+        tmp_position += radii[i]
+
+    y = [0 for i, _ in enumerate(x)]
+
+    return np.array(x), np.array(y)
+
+
 def pretty_print_individual(ind: Sequence):
     n = int(np.sqrt(len(ind)))
     reshaped_ind = np.array(ind).reshape(n, n)

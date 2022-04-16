@@ -1,6 +1,6 @@
 from hpctool import ComsolModel, Task, Solver
 import numpy as np
-from utils import grid, pretty_print_individual, get_multipoles_from_res
+from utils import grid, linear_grid, pretty_print_individual, get_multipoles_from_res
 import os
 import sys
 from loguru import logger
@@ -25,26 +25,18 @@ class MyModel(ComsolModel):
     #     self.parameter('min_freq', '100[Hz]')
     #     self.parameter('step', '100[Hz]')
 
-    def pre_build(self, x, *args, **kwargs):
-        indices = np.nonzero(x)
+    def pre_build(self, cylinders_length, cylinders_radii, cylinders_separations, *args, **kwargs):
         node_selections = []
+        xgrid, ygrid = linear_grid(cylinders_radii, cylinders_separations)
 
-        xgrid, ygrid = grid(**self.config)
-        tau = abs(xgrid[1] - xgrid[0])
-        width = tau
+        idx = 0
+        for i, length in enumerate(cylinders_length):
+            name = f"cyl_{i}"
+            node, node_sel = self.add_cylinder(name, xgrid[i], ygrid[i], 0, self.geometry, length, cylinders_radii[i])
+            node_selections.append(node_sel)
+            idx += 1
 
-        # idx = 0
-        # for x_i in xgrid:
-        #     for y_j in ygrid:
-        #         name = f"cyl_xi_{x_i}, yj_{y_j}"
-        #
-        #         if idx in list(indices[0]):
-        #             node, node_sel = self.add_cylinder(name, x_i, y_j, 0, self.geometry, 0.01, width)
-        #             node_selections.append(node_sel)
-        #         else:
-        #             node_selections.append(None)
-        #         idx += 1
-        node, node_sel = self.add_cylinder('cyl_xi_1 yj_1', 0, 0, 0, self.geometry, 0.00001, 0.00001)
+        # node, node_sel = self.add_cylinder('cyl_xi_1 yj_1', 0, 0, 0, self.geometry, 0.00001, 0.00001)
         # (self/'selections'/'plastic').property(
         #     'input', list(np.array(node_selections)[indices])
         # )
