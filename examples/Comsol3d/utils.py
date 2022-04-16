@@ -11,13 +11,12 @@ def grid(n, x_limits, y_limits):
 
 
 def linear_grid(radii, separations):
-    assert(len(radii) - 1 == len(separations))
 
     tmp_position = 0
     num_cylinders = len(radii)
     x = []
     for i in range(num_cylinders):
-        tmp_position += separations[i]
+        tmp_position += separations[i] + radii[i] if i > 0 else separations[i]
         x.append(tmp_position)
         tmp_position += radii[i]
 

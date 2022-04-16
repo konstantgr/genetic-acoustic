@@ -66,13 +66,16 @@ class ComsolModel(mph.Model, Model):
         node.property("h", str(h))
 
         node_sel = (self/'selections').create('Box', name=name)
-        node_sel.property('entitydim', 2)
+        node_sel.property('entitydim', 3)
 
         modified_r = r * alpha
+        modified_h = h * alpha
         node_sel.property('xmin', f'+{x_i}-{modified_r}')
         node_sel.property('xmax', f'+{x_i}+{modified_r}')
         node_sel.property('ymin', f'+{y_j}-{modified_r}')
         node_sel.property('ymax', f'+{y_j}+{modified_r}')
+        node_sel.property('zmin', f'+{z_k}-{modified_h - h}')
+        node_sel.property('zmax', f'+{z_k}+{modified_h}')
         node_sel.property('condition', 'inside')
 
         return node, node_sel
@@ -101,6 +104,27 @@ class ComsolModel(mph.Model, Model):
         # super().clear()
         super().reset()
 
+    def export_image(self, source: mph.Node, filepath: AnyStr, props: Dict = None):
+        exports = self / 'exports'
+        image = exports.create('Image')
+        default_props = {
+            'size': 'manualweb',
+            'unit': 'px',
+            'height': '720',
+            'width': '720'
+        }
+        for prop in default_props:
+            image.property(prop, default_props[prop])
+        if props is not None:
+            for prop in props:
+                image.property(prop, props[prop])
+
+        image.property('sourceobject', source)
+        image.property('filename', filepath)
+
+        self.export()
+        image.remove()
+
     def plot2d(self, expr: AnyStr, filepath: AnyStr, props: Dict = None):
         plots = self / 'plots'
         plots.java.setOnlyPlotWhenRequested(True)
@@ -110,26 +134,7 @@ class ComsolModel(mph.Model, Model):
         surface.property('resolution', 'normal')
         surface.property('expr', expr)
 
-        exports = self / 'exports'
-
-        image = exports.create('Image')
-        image.property('sourceobject', plot)
-        image.property('filename', filepath)
-        default_props = {
-            'size': 'manualweb',
-            'unit': 'px',
-            'height': '720',
-            'width': '720'
-        }
-
-        for prop in default_props:
-            image.property(prop, default_props[prop])
-        if props is not None:
-            for prop in props:
-                image.property(prop, props[prop])
-
-        self.export()
-        image.remove()
+        self.export_image(plot, filepath, props)
         plot.remove()
 
     def getLastComputationTime(self):
@@ -139,17 +144,17 @@ class ComsolModel(mph.Model, Model):
         return -1 if not len(studies) else int(studies[-1].java.getLastComputationTime())
 
     @abstractmethod
-    def results(self, x, *args: Any, **kwargs: Any) -> Any:
+    def results(self, *args: Any, **kwargs: Any) -> Any:
         pass
 
     def configure(self) -> Any:
         pass
 
-    def pre_build(self, x, *args: Any, **kwargs: Any):
+    def pre_build(self, *args: Any, **kwargs: Any):
         pass
 
-    def pre_solve(self, x, *args: Any, **kwargs: Any):
+    def pre_solve(self, *args: Any, **kwargs: Any):
         pass
 
-    def pre_clear(self, x, *args: Any, **kwargs: Any):
+    def pre_clear(self, *args: Any, **kwargs: Any):
         pass
