@@ -57,11 +57,13 @@ class ComsolModel(mph.Model, Model):
     def add_cylinder(self, name: str,
                      x_i: float, y_j: float, z_k: float,
                      geometry: mph.Node,
+                     h: float,
                      r: float, alpha: float = 1.1):
 
         node = geometry.create("Cylinder", name=name)
         node.property("r", str(r))
         node.property("pos", [str(x_i), str(y_j), str(z_k)])
+        node.property("h", str(h))
 
         node_sel = (self/'selections').create('Box', name=name)
         node_sel.property('entitydim', 2)
