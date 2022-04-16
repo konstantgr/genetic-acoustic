@@ -54,6 +54,27 @@ class ComsolModel(mph.Model, Model):
 
         return node, node_sel
 
+    def add_cylinder(self, name: str,
+                     x_i: float, y_j: float, z_k: float,
+                     geometry: mph.Node,
+                     r: float, alpha: float = 1.1):
+
+        node = geometry.create("Cylinder", name=name)
+        node.property("r", str(r))
+        node.property("pos", [str(x_i), str(y_j), str(z_k)])
+
+        node_sel = (self/'selections').create('Box', name=name)
+        node_sel.property('entitydim', 2)
+
+        modified_r = r * alpha
+        node_sel.property('xmin', f'+{x_i}-{modified_r}')
+        node_sel.property('xmax', f'+{x_i}+{modified_r}')
+        node_sel.property('ymin', f'+{y_j}-{modified_r}')
+        node_sel.property('ymax', f'+{y_j}+{modified_r}')
+        node_sel.property('condition', 'inside')
+
+        return node, node_sel
+
     @staticmethod
     def _clean(node: mph.Node, tag: str):
         for c in node.children():
