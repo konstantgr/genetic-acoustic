@@ -1,8 +1,5 @@
 import multiprocessing
-import os
 import socket
-
-import mpi4py.MPI
 
 from .models import ComsolModel, Model
 import mph
@@ -50,17 +47,21 @@ class MultiprocessingWorker(Worker):
 
 
 class MPIWorker(Worker):
+    def __init__(self):
+        import mpi4py.MPI
+        self.comm = mpi4py.MPI.COMM_WORLD
+
     @abstractmethod
     def start(self):
         pass
 
     def start_loop(self):
-        logger.info(f'Rang {mpi4py.MPI.COMM_WORLD.Get_rank()} {socket.gethostname()} Starting')
+        logger.info(f'Rang {self.comm.Get_rank()} {socket.gethostname()} Starting')
         self.start()
         self._loop()
 
     def _loop(self):
-        comm = mpi4py.MPI.COMM_WORLD
+        comm = self.comm
         logger.info(f'Rang {comm.Get_rank()} {socket.gethostname()} Entering the loop')
         while True:
             req = comm.irecv(source=0)

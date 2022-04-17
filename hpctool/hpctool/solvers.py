@@ -1,15 +1,8 @@
 import multiprocessing
-import queue
 from abc import ABC, abstractmethod
 from .workers import Worker, MultiprocessingWorker, MPIWorker
 from multiprocessing import Queue, JoinableQueue
 from typing import Any, Sequence, Union, List, Hashable
-from queue import Empty
-import numpy as np
-from mpi4py import MPI
-import mpi4py
-from mpi4py.futures import MPIPoolExecutor, MPICommExecutor
-import threading
 import time
 
 from .utils import x_to_solve
@@ -148,6 +141,7 @@ class SimpleSolver(Solver):
 
 class MPISolver(Solver):
     def __init__(self, worker: MPIWorker, caching: bool = False, buffer_size: int = 32768):
+        from mpi4py import MPI
         if not isinstance(worker, MPIWorker):
             raise TypeError('Worker has to be the object of type MPIWorker')
         super(MPISolver, self).__init__()
