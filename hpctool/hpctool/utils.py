@@ -15,13 +15,17 @@ def make_unique(labels) -> list:
     return new_labels
 
 
-def x_to_solve(tasks, cache) -> Tuple[List[int], List[int]]:
-    to_solve, cached = [], []
+def x_to_solve(tasks, cache) -> Tuple[List[int], List[int], List[int]]:
+    to_solve, cached, same = [], [], []
+    to_solve_tags = []
     for i, task in enumerate(tasks):
         if task.tag is None:
             raise ValueError('If caching is True all the tasks must have a tag property')
         if task.tag in cache:
             cached.append(i)
+        elif task.tag in to_solve_tags:
+            same.append(i)
         else:
             to_solve.append(i)
-    return to_solve, cached
+            to_solve_tags.append(task.tag)
+    return to_solve, cached, same

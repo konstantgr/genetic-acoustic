@@ -47,21 +47,19 @@ class MultiprocessingWorker(Worker):
 
 
 class MPIWorker(Worker):
-    def __init__(self):
-        import mpi4py.MPI
-        self.comm = mpi4py.MPI.COMM_WORLD
-
     @abstractmethod
     def start(self):
         pass
 
-    def start_loop(self):
-        logger.info(f'Rang {self.comm.Get_rank()} {socket.gethostname()} Starting')
+    def start_loop(self, comm):
+        import mpi4py
+        if not isinstance(comm, mpi4py.MPI.Intracomm):
+            raise TypeError(f'comm has to be instance of mpi4py.MPI.Intracomm')
+        logger.info(f'Rang {comm.Get_rank()} {socket.gethostname()} Starting')
         self.start()
-        self._loop()
+        self._loop(comm)
 
-    def _loop(self):
-        comm = self.comm
+    def _loop(self, comm):
         logger.info(f'Rang {comm.Get_rank()} {socket.gethostname()} Entering the loop')
         while True:
             req = comm.irecv(source=0)
@@ -78,28 +76,21 @@ class SimpleWorker(Worker):
     def __init__(self, model: Model):
         self.model = model
 
-    def start(self, *args):
+    def start(self):
         pass
 
     def do_the_job(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Any:
-        logger.debug(f'{multiprocessing.current_process().name} {socket.gethostname()} Starting doing the job')
         return self.model.results(*args, **kwargs)
 
 
 class SimpleMultiprocessingWorker(SimpleWorker, MultiprocessingWorker):
-    def start(self):
-        pass
-
     def do_the_job(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Any:
-        return self.model.results(*args, **kwargs)
+        logger.debug(f'{multiprocessing.current_process().name} {socket.gethostname()} Starting doing the job')
+        return super().do_the_job(args, kwargs)
 
 
 class SimpleMPIWorker(SimpleWorker, MPIWorker):
-    def start(self):
-        pass
-
-    def do_the_job(self, args: Tuple[Any], kwargs: Dict[str, Any]) -> Any:
-        return self.model.results(*args, **kwargs)
+    pass
 
 
 class ComsolWorker(Worker):

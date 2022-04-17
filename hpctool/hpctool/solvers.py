@@ -35,22 +35,26 @@ class Solver(ABC):
 
     def solve(self, tasks: Sequence[Task]) -> List[Any]:
         if self.caching:
-            to_solve, cached = x_to_solve(tasks, self.cache)
+            to_solve, cached, same = x_to_solve(tasks, self.cache)
         else:
-            to_solve, cached = range(len(tasks)), []
+            to_solve, cached, same = range(len(tasks)), [], []
 
-        logger.info(f'Starting to solve {len(tasks)} tasks with {self.total_workers} workers: '
-                    f'{len(cached)} solutions will be reused')
+        message = f'Starting to solve {len(tasks)} tasks with {self.total_workers} workers'
+        if self.caching:
+            message += f':\n\t{len(cached)} solutions will be reused\n\t{len(same)} tasks are the same'
+        else:
+            message += f' (caching is off)'
+        logger.info(message)
         start_time = time.time()
 
-        res = self._solve(tasks, to_solve, cached)
+        res = self._solve(tasks, to_solve, cached, same)
 
         end_time = time.time()
         logger.info(f'All the tasks have been solved in {round(end_time-start_time, 2)}s')
         return res
 
     @abstractmethod
-    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int], same: List[int]) -> List[Any]:
         pass
 
     def __enter__(self):
@@ -88,21 +92,27 @@ class MultiprocessingSolver(Solver):
         if self.total_workers <= 0:
             raise RuntimeError('At least 1 worker is needed')
 
-    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int], same: List[int]) -> List[Any]:
         results = [None for _ in tasks]
         for i, task in enumerate(tasks):
             if i in to_solve:
                 self._jobs.put((i, task.args, task.kwargs))
+            elif i in cached:
+                results[i] = self.cache[task.tag]
             else:
-                results[i] = self.cache[task.tag] if task.tag is not None else None
+                results[i] = None
 
         for k in range(len(to_solve)):
             (i, r) = self._results.get()
             if i == -1:
-                raise RuntimeError
-            if self.caching and tasks[i].tag is not None:
+                raise RuntimeError(r)
+            if self.caching:
                 self.cache[tasks[i].tag] = r
             results[i] = r
+
+        for i in same:
+            results[i] = self.cache[tasks[i].tag]
+
         return results
 
     def stop(self):
@@ -127,15 +137,17 @@ class SimpleSolver(Solver):
         self.worker.start()
         self.total_workers = 1
 
-    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int], same: List[int]) -> List[Any]:
         results = [None for _ in tasks]
         for i, task in enumerate(tasks):
             if i in to_solve:
                 results[i] = self.worker.do_the_job(task.args, task.kwargs)
-                if self.caching and tasks[i].tag is not None:
+                if self.caching:
                     self.cache[task.tag] = results[i]
-            else:
+            elif i in cached or i in same:
                 results[i] = self.cache[task.tag] if task.tag is not None else None
+            else:
+                results[i] = None
         return results
 
 
@@ -157,12 +169,12 @@ class MPISolver(Solver):
 
         if self.rank != 0:
             logger.debug(f'Starting loop in {self.comm.Get_rank()}')
-            self.worker.start_loop()
+            self.worker.start_loop(self.comm)
             # self.start_listening()
             MPI.Finalize()
             exit()
 
-    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int]) -> List[Any]:
+    def _solve(self, tasks: Sequence[Task], to_solve: List[int], cached: List[int], same: List[int]) -> List[Any]:
         results = [None for _ in tasks]
         requests = []
         for i, task in enumerate(tasks):
@@ -171,14 +183,18 @@ class MPISolver(Solver):
                 req = self.comm.isend((i, task.args, task.kwargs), dest=dest, tag=i)
                 req.wait()
                 requests.append(self.comm.irecv(self.buffer_size, source=dest))
-            else:
-                results[i] = self.cache[task.tag] if task.tag is not None else None
+            elif i in cached:
+                results[i] = self.cache[task.tag]
 
         for p in range(len(requests)):
             i, r = requests[p].wait()
-            if self.caching and tasks[i].tag is not None:
+            if self.caching:
                 self.cache[tasks[i].tag] = r
             results[i] = r
+
+        for i in same:
+            results[i] = self.cache[tasks[i].tag]
+
         return results
 
     def stop(self):
